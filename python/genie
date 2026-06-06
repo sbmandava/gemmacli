@@ -31,6 +31,9 @@ GRAPH_LOG="${GENIE_GRAPH_LOG:-$HOME/.genie/graph-update.log}"
 BACKEND_CACHE="${GENIE_BACKEND_CACHE:-$HOME/.genie/backend}"
 MODEL_DEFAULT_FILE="${GENIE_MODEL_DEFAULT_FILE:-$HOME/.genie/model_default}"
 RAW_BASE="${GENIE_RAW_BASE:-https://raw.githubusercontent.com/sbmandava/gemma-genie/main}"
+# Repo subdir holding the scripts (now python/). Self-update tries here first,
+# then the legacy repo root. Override with GENIE_RAW_SUBDIR= (empty for root).
+RAW_SUBDIR="${GENIE_RAW_SUBDIR-python}"
 UPDATE_STAMP="${GENIE_UPDATE_STAMP:-$HOME/.genie/last_update_check}"
 RAG_THRESHOLD_CHARS="${GENIE_RAG_THRESHOLD:-14000}"   # ~3500 tokens
 RAG_TOPK="${GENIE_RAG_TOPK:-15}"
@@ -191,18 +194,26 @@ maybe_self_update() {
     fi
     mkdir -p "$(dirname "$UPDATE_STAMP")"; date +%s > "$UPDATE_STAMP"
     local remote_ver
-    remote_ver=$(curl -fsSL "$RAW_BASE/genie" 2>/dev/null | grep -m1 '^VERSION=' | cut -d'"' -f2)
+    remote_ver=$(raw_fetch genie 2>/dev/null | grep -m1 '^VERSION=' | cut -d'"' -f2)
     [[ -n "$remote_ver" ]] || return 0
     if version_gt "$remote_ver" "$VERSION"; then
         echo "genie: upgrading $VERSION -> $remote_ver..." >&2
         local f ok=1
         for f in genie genie_rag.py genie_graph.py install.sh; do
-            curl -fsSL "$RAW_BASE/$f" -o "$SCRIPT_DIR/.$f.new" 2>/dev/null \
+            raw_fetch "$f" > "$SCRIPT_DIR/.$f.new" 2>/dev/null \
+                && [[ -s "$SCRIPT_DIR/.$f.new" ]] \
                 && mv "$SCRIPT_DIR/.$f.new" "$SCRIPT_DIR/$f" || { ok=0; rm -f "$SCRIPT_DIR/.$f.new"; }
         done
         chmod +x "$SCRIPT_DIR/genie" 2>/dev/null
         [[ $ok -eq 1 ]] && echo "genie: upgraded to $remote_ver (effective next run)." >&2
     fi
+}
+
+# Fetch a repo file to stdout, trying the python/ layout first, then repo root,
+# so self-update works whether or not the repo has been restructured.
+raw_fetch() {  # raw_fetch <filename>
+    curl -fsSL "$RAW_BASE/$RAW_SUBDIR/$1" 2>/dev/null \
+        || curl -fsSL "$RAW_BASE/$1" 2>/dev/null
 }
 
 detect_total_gb() {  # total system RAM in whole GB

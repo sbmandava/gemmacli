@@ -2,3 +2,10 @@ __pycache__/
 *.pyc
 .*.new
 .claude/
+
+# Rust build artifacts (any target/ dir)
+target/
+
+# Local-only working docs (not published)
+/specs/
+/CLAUDE.md

@@ -1,0 +1,17 @@
+{
+  "version": "0.2.4",
+  "components": {
+    "binary": {
+      "x86_64-linux-gnu": {
+        "url": "https://github.com/sbmandava/gemma-genie/releases/download/rust-prebuilt-0.2.4/genie-x86_64-linux-gnu",
+        "sha256": "fc18cbe3e1d6958b42b58c9d8ecf348d1b8f0c59ac5934e44909e0cc15423ab5",
+        "size": 218611208
+      },
+      "aarch64-macos": {
+        "url": "https://github.com/sbmandava/gemma-genie/releases/download/rust-prebuilt-0.2.4/genie-aarch64-macos",
+        "sha256": "7cdc200078007de24b76f27e929d252c7ecc3392eca0eab7baffa60cfe1301fd",
+        "size": 180210904
+      }
+    }
+  }
+}

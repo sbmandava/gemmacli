@@ -5,6 +5,23 @@ All notable changes to Gemma Genie are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — `rust` branch
+
+### Added
+- **Single-binary Rust rewrite** under [`rust/`](rust/) (milestones M0–M6): same
+  CLI/behaviour with no Python/`uvx` at runtime — `lancedb` + `model2vec-rs` +
+  `liteparse` + `lbug`, with `litert-lm` subprocessed (or in-process via
+  `--features ffi` for text). Builds for Linux x86_64 and macOS arm64.
+- **OS-agnostic modular installer** (`rust/installer/` + the `genie-bootstrap`
+  crate): a tiny bootstrapper probes the environment (OS/arch/GPU/RAM) and fetches
+  only the components a target needs.
+
+### Changed
+- **Repository restructure**: the shipping bash + Python implementation moved to
+  [`python/`](python/) (`genie`, `genie_rag.py`, `genie_graph.py`, `install.sh`).
+  `install.sh` and `genie`'s self-update now resolve scripts from `python/` with a
+  repo-root fallback (`GENIE_RAW_SUBDIR`), so existing installs keep working.
+
 ## [0.2.4]
 
 ### Added

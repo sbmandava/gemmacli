@@ -1,0 +1,55 @@
+[package]
+name = "genie"
+version = "0.2.4"
+edition = "2021"
+description = "Private, offline AI assistant CLI (Rust rewrite) — Gemma 4 + local RAG + correlation graph"
+license = "Apache-2.0"
+repository = "https://github.com/sbmandava/gemma-genie"
+
+[[bin]]
+name = "genie"
+path = "src/main.rs"
+
+[features]
+# In-process inference via litert-lm's C API (links prebuilt liblitert-lm.so).
+# Off by default — the default build subprocesses the litert-lm runtime (M1).
+ffi = []
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+
+# M2 — document parsing + RAG (local sources; see ../../CLAUDE.md)
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+futures = "0.3"
+arrow-array = "58"
+arrow-schema = "58"
+liteparse = { path = "/opt/projects/unovie/research/liteparse/crates/liteparse" }
+model2vec-rs = { path = "/opt/projects/unovie/research/model2vec-rs" }
+lancedb = { path = "/opt/projects/unovie/research/lancedb/rust/lancedb" }
+
+# M4 — correlation graph (needs CMake + g++-13 to build the ladybug C++ engine)
+lbug = { path = "/opt/projects/unovie/research/ladybug-rust" }
+
+# M5 — model lifecycle (download/verify); matches model2vec-rs's hf-hub
+hf-hub = { version = "0.4", default-features = false, features = ["ureq"] }
+
+# M6 — FFI conversation API uses JSON messages
+serde_json = "1"
+
+# ---------------------------------------------------------------------------
+# Added per milestone. Use the LOCAL research/ sources (see ../../CLAUDE.md);
+# do not switch to crates.io without checking the local repo first.
+#
+# M2/M3 — RAG (embeddings + vector store):
+#   model2vec-rs = { path = "/opt/projects/unovie/research/model2vec-rs" }
+#   lancedb      = { path = "/opt/projects/unovie/research/lancedb/rust/lancedb" }
+#       (also enable the [patch] for lance* in ../../rust/Cargo.toml)
+#
+# M2 — document parsing (needs PDFium; Tesseract for OCR, default feature):
+#   liteparse    = { path = "/opt/projects/unovie/research/liteparse/crates/liteparse" }
+#
+# M4 — correlation graph (needs CMake + C++ to build the ladybug engine):
+#   lbug         = { path = "/opt/projects/unovie/research/ladybug-rust" }
+#
+# M1/M6 — litert-lm: v1 subprocesses the prebuilt binary (no crate). FFI later.

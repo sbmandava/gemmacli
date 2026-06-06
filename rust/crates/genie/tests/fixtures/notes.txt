@@ -1,0 +1,3 @@
+Project Apollo is owned by Jane Smith and was built by the Acme Corporation.
+Project Zeus is owned by Bob Jones. The vendor for Zeus is Globex.
+The vacation policy grants 20 days of paid leave per year, approved by HR.

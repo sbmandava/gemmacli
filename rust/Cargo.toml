@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["crates/genie", "crates/genie-bootstrap"]
+
+# ---------------------------------------------------------------------------
+# Local-source overrides (see ../CLAUDE.md "Building the Rust version").
+#
+# When `lancedb` is added as a dependency (RUST_PLAN.md M2/M3) it pulls the
+# `lance*` core crates via git from lance-format/lance. Uncomment this block to
+# build them from the local clone at /opt/projects/unovie/research/lance
+# (checked out at tag v8.0.0-beta.6) instead of fetching over the network.
+# Add one line per lance* crate that lancedb references.
+#
+[patch."https://github.com/lance-format/lance.git"]
+lance                 = { path = "/opt/projects/unovie/research/lance/rust/lance" }
+lance-core            = { path = "/opt/projects/unovie/research/lance/rust/lance-core" }
+lance-datafusion      = { path = "/opt/projects/unovie/research/lance/rust/lance-datafusion" }
+lance-datagen         = { path = "/opt/projects/unovie/research/lance/rust/lance-datagen" }
+lance-file            = { path = "/opt/projects/unovie/research/lance/rust/lance-file" }
+lance-io              = { path = "/opt/projects/unovie/research/lance/rust/lance-io" }
+lance-index           = { path = "/opt/projects/unovie/research/lance/rust/lance-index" }
+lance-table           = { path = "/opt/projects/unovie/research/lance/rust/lance-table" }
+lance-linalg          = { path = "/opt/projects/unovie/research/lance/rust/lance-linalg" }
+lance-testing         = { path = "/opt/projects/unovie/research/lance/rust/lance-testing" }
+lance-encoding        = { path = "/opt/projects/unovie/research/lance/rust/lance-encoding" }
+lance-arrow           = { path = "/opt/projects/unovie/research/lance/rust/lance-arrow" }
+lance-namespace       = { path = "/opt/projects/unovie/research/lance/rust/lance-namespace" }
+lance-namespace-impls = { path = "/opt/projects/unovie/research/lance/rust/lance-namespace-impls" }

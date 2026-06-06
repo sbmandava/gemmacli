@@ -292,6 +292,39 @@ only going to get better.
 
 ---
 
+### Why are we planning to move to Rust?
+
+Today's `genie` is a bash orchestrator plus Python helpers, run via `uv`. It
+works great — but for a security-first, edge-first agent, we're rewriting it as a
+**single, self-contained Rust binary**. Why:
+
+- **Security & safety.** Rust is **memory-safe** by design — it eliminates whole
+  classes of bugs (buffer overflows, use-after-free, data races) at compile time.
+  For a tool meant to run on confidential, regulated, and air-gapped data, a
+  hardened core is the right foundation.
+- **Faster, leaner, better.** One native binary means **no Python runtime, no
+  `uv`/`pip` at runtime, faster startup, and a smaller footprint** — exactly what
+  you want on a laptop or phone. Several of our dependencies (LanceDB, liteparse,
+  LadybugDB, model2vec) are *already Rust at the core*, so going native removes
+  layers rather than adding them.
+- **Safeguard against supply-chain attacks.** A compiled binary with **pinned,
+  vendored, auditable dependencies** is a far smaller attack surface than pulling
+  dozens of transitive Python packages from the network on each run. Fewer moving
+  parts, nothing fetched at runtime, easier to verify end to end.
+- **A path to WebAssembly.** The same Rust core can compile to **WASM** — opening
+  the door to running Genie's intelligence in a **browser tab or other sandboxed
+  environments**, fully on-device, with no install at all. :)
+- **Native Windows in the future.** A single Rust binary cross-compiles cleanly,
+  so beyond today's macOS focus (with Linux and Windows/WSL2 in alpha) we may
+  ship a **true native Windows build** — no WSL2 required — bringing the same
+  private, offline assistant to more machines.
+
+We're doing this incrementally: the proven bash + Python version keeps shipping
+(now under `python/`) while the Rust rewrite grows alongside it (under `rust/`),
+so nothing breaks while we level up the foundation.
+
+---
+
 ### Does my data leave my laptop?
 
 **No.** Your documents, questions, embeddings, and the graph never leave the

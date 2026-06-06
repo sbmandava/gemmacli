@@ -1,0 +1,10 @@
+# lbug ships a prebuilt liblbug.a that statically bundles zstd; lancedb also
+# links zstd (via zstd-sys), so linking both yields "duplicate symbol: ZSTD_*".
+# Both are the same C library, so allow the linker to take the first definition.
+# Also pin the C++ toolchain lbug's FFI shim needs (C++20 <format> => GCC >= 13).
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-Wl,--allow-multiple-definition"]
+
+[env]
+CC = "gcc-13"
+CXX = "g++-13"
