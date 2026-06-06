@@ -164,17 +164,17 @@ PY
     if [ "${GENIE_SKIP_MODELS:-0}" != "1" ]; then
         for spec in "${MODEL_SPECS[@]}"; do
             repo="${spec%%|*}"; rest="${spec#*|}"; file="${rest%%|*}"; size="${rest##*|}"
-            if hf_cached "$repo" "$file"; then
-                say "Model $repo already downloaded — skipping."
-                continue
-            fi
-            say "Downloading $repo (~${size}) into HF hub — progress below:"
-            # hf_hub_download streams a progress bar to the terminal.
+            say "Ensuring $repo (~${size}) is downloaded & checksum-verified..."
+            # hf_hub_download is the source of truth: it resumes any partial /
+            # aborted download, verifies the file's sha256 before finalizing it
+            # in the cache, and returns instantly if it's already complete. This
+            # avoids trusting a half-downloaded file just because it exists.
             uvx --with huggingface_hub python - "$repo" "$file" <<'PY' \
-              || warn "Could not pre-download $repo (it will download on first use)."
+              || warn "Could not download/verify $repo (it will download on first use)."
 import sys
 from huggingface_hub import hf_hub_download
-hf_hub_download(repo_id=sys.argv[1], filename=sys.argv[2])
+p = hf_hub_download(repo_id=sys.argv[1], filename=sys.argv[2])
+print(f"  verified: {p}")
 PY
         done
     fi

@@ -69,6 +69,7 @@ Subcommands / inspection:
   --graph-stats             Show correlation-graph stats + top hubs
   --graph-query "<cypher>"  Run a raw Cypher query against the graph
   --uninstall [-y]          Remove models, caches, symlinks, and scripts
+  --verify-models           Checksum (sha256) the downloaded model weights
 
 Analyzing files with --txt/--doc/--dir also auto-updates a LadybugDB
 correlation graph (entities per file; --dir uses Gemma for extraction). A bare
@@ -177,6 +178,34 @@ detect_total_gb() {  # total system RAM in whole GB
         bytes=$(( $(awk '/MemTotal/{print $2}' /proc/meminfo 2>/dev/null || echo 0) * 1024 ))
     fi
     echo $(( bytes / 1024 / 1024 / 1024 ))
+}
+
+verify_one_model() {  # repo, filename — compare on-disk sha256 to the HF LFS blob hash
+    local repo="$1" file="$2"
+    local snaps="$HF_HOME/hub/models--${repo//\//--}/snapshots"
+    local f; f="$(find "$snaps" -name "$file" 2>/dev/null | head -1)"
+    [[ -n "$f" ]] || { printf '  %-10s %s\n' "MISSING" "$repo"; return 1; }
+    # HF stores LFS blobs named by their sha256; the snapshot file links to it.
+    local expected; expected="$(basename "$(readlink "$f" 2>/dev/null || echo "$f")")"
+    if [[ ! "$expected" =~ ^[0-9a-f]{64}$ ]]; then
+        printf '  %-10s %s\n' "PRESENT" "$repo (no LFS hash to check)"; return 0
+    fi
+    local actual; actual="$(shasum -a 256 "$f" 2>/dev/null | cut -d' ' -f1)"
+    if [[ "$actual" == "$expected" ]]; then
+        printf '  %-10s %s\n' "OK" "$repo"
+    else
+        printf '  %-10s %s\n' "CORRUPT" "$repo (sha256 mismatch — re-run install to repair)"; return 1
+    fi
+}
+
+cmd_verify_models() {
+    echo "Verifying model weights (sha256) in $HF_HOME/hub ..."
+    local rc=0
+    verify_one_model "litert-community/gemma-4-E2B-it-litert-lm" "gemma-4-E2B-it.litertlm" || rc=1
+    verify_one_model "litert-community/gemma-4-E4B-it-litert-lm" "gemma-4-E4B-it.litertlm" || rc=1
+    if [[ $rc -eq 0 ]]; then echo "All present models verified."; else
+        echo "Some models are missing or corrupt — re-run the installer to repair."; fi
+    return $rc
 }
 
 cmd_uninstall() {
@@ -335,6 +364,7 @@ case "${1:-}" in
     doctor)               echo "Gemma Genie $VERSION"; check_deps; exit 0 ;;
     cache)                shift; cmd_cache "$@"; exit $? ;;
     --uninstall|uninstall) shift; cmd_uninstall "$@"; exit $? ;;
+    --verify-models)       cmd_verify_models; exit $? ;;
     --graph-stats)        mkdir -p "$(dirname "$GRAPH_DB")"; run_graph --mode stats; exit $? ;;
     --graph-query)
         [[ -n "${2:-}" ]] || { echo "Usage: $(basename "$0") --graph-query \"<cypher>\"" >&2; exit 1; }
