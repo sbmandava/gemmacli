@@ -354,7 +354,7 @@ graph, but that finishes and exits on its own — nothing stays resident.)
 
 | Resource | Minimum | Recommended |
 |----------|---------|-------------|
-| OS | macOS, Linux (Windows via WSL2, untested) | macOS (Apple Silicon) |
+| OS | macOS (Linux & Windows/WSL2 are alpha) | macOS (Apple Silicon) |
 | RAM | ~4 GB (uses the smaller **e2b** model) | 16 GB (runs **e4b** comfortably) |
 | Disk | ~6–8 GB free (model weights + caches) | 10 GB+ |
 | GPU | none (CPU works) | Apple M-series / supported GPU |

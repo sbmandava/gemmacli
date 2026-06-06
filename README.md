@@ -15,8 +15,8 @@ analyze documents, and query whole folders — all locally, no cloud.
 | OS | Status |
 |----|--------|
 | macOS (Apple Silicon / Intel) | ✅ supported |
-| Linux (x86_64 / arm64) | ✅ supported |
-| Windows (WSL2) | ⚠️ not tested — should work under WSL2 |
+| Linux (x86_64 / arm64) | 🧪 alpha |
+| Windows (WSL2) | 🧪 alpha |
 
 GPU acceleration is used when available, with automatic fallback to CPU.
 
