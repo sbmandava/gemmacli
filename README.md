@@ -23,7 +23,7 @@ GPU acceleration is used when available, with automatic fallback to CPU.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sbmandava/gemmacli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash
 ```
 
 The installer is idempotent and bootstraps **everything** on a fresh machine:

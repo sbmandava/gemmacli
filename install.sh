@@ -2,7 +2,7 @@
 #
 # Gemma Genie installer — bootstraps everything on a fresh machine.
 #
-#   curl -fsSL https://raw.githubusercontent.com/sbmandava/gemmacli/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash
 #
 # Idempotent: safe to re-run. If you delete ~/.gemma (the vector cache) or are on
 # a brand-new laptop, re-running this brings everything back, including the
@@ -19,7 +19,7 @@
 set -euo pipefail
 
 INSTALL_DIR="${GEMMA_INSTALL_DIR:-/opt/projects/unovie/gemmacli}"
-RAW_BASE="${GEMMA_RAW_BASE:-https://raw.githubusercontent.com/sbmandava/gemmacli/main}"
+RAW_BASE="${GEMMA_RAW_BASE:-https://raw.githubusercontent.com/sbmandava/gemma-genie/main}"
 CACHE_DIR="$HOME/.gemma"
 
 # All models live in the HuggingFace hub cache.
