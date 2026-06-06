@@ -49,6 +49,41 @@ your terms, with your data staying yours.
 
 ---
 
+## "I'm skeptical of all these Genie claims."
+
+Fair. Here's our defense, with apologies to Dr. Seuss — *Green Vectors and
+Knowledge Graph*:
+
+> I do not trust this Genie thing.
+> I do not trust the claims you bring.
+>
+> Would you, could you, on your Mac?
+> With **Vectors** here — and nothing sent back?
+> Would you, could you, doubt the hype,
+> then watch a **Knowledge Graph** take shape?
+>
+> I will not pipe in my domain.
+> I will not run it on a plane.
+> I will not feed it doc or file.
+> I will not trust it for a while!
+>
+> Try the **Vectors**. Try the **Graph**.
+> No cloud, no key, no token math.
+> Try them here, try them there —
+> your data never leaves your chair.
+>
+> ...and then I tried, in my own den,
+> a folder, screenshot, voice, and pen.
+> It read them all, it linked, it found —
+> and not one byte had left the ground!
+>
+> Say! I *like* green **Vectors** and the **Graph**!
+> I like them — yes! — I'll run `genie` and laugh.
+> I'll trust the Genie on my Mac…
+> with **Vectors** out front and a **Graph** at the back.
+
+---
+
 ## What is the overarching goal of this project?
 
 Gemma Genie is **sponsored by [Unovie.AI](https://unovie.ai/)** as a public
