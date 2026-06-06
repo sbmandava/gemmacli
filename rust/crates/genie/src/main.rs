@@ -18,14 +18,16 @@ mod rag;
 use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, Command};
+use config::Config;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let cfg = Config::load(cli.model.as_deref())?;
 
     // Subcommands first (doctor / cache).
     if let Some(cmd) = &cli.command {
         return match cmd {
-            Command::Doctor => doctor::run(),
+            Command::Doctor => doctor::run(&cfg),
             Command::Cache { action } => rag::cache(action),
         };
     }
@@ -46,13 +48,18 @@ fn main() -> Result<()> {
 
     // Primary actions.
     if let Some(path) = &cli.image {
-        return llm::describe_image(path, &cli);
+        return llm::describe_image(path, &cfg, &cli);
     }
     if let Some(path) = &cli.audio {
-        return llm::transcribe_audio(path, &cli);
+        return llm::transcribe_audio(path, &cfg, &cli);
     }
     if let Some(question) = &cli.ask {
-        return rag::ask(question, &cli);
+        // Document-grounded asks need parsing + RAG (M2/M3); plain or piped
+        // questions are answered directly by the model (M1).
+        if cli.doc.is_some() || cli.txt.is_some() || cli.dir.is_some() {
+            return rag::ask(question, &cli);
+        }
+        return llm::ask(question, &cfg, &cli);
     }
 
     // No action: print help.

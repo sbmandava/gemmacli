@@ -4,7 +4,9 @@ use crate::cli::Cli;
 use anyhow::Result;
 
 pub fn ask(_question: &str, _cli: &Cli) -> Result<()> {
-    println!("genie (rust): --ask not yet implemented (RUST_PLAN.md M1/M2). See RUST_PLAN.md");
+    // Plain/piped --ask is handled by llm::ask (M1). This entry point is for
+    // document-grounded asks (--doc/--txt/--dir), which need parse + retrieval.
+    println!("genie (rust): document-grounded --ask (--doc/--txt/--dir) not yet implemented (RUST_PLAN.md M2/M3).");
     Ok(())
 }
 
