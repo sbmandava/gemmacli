@@ -15,6 +15,20 @@ fn fixture(name: &str) -> String {
     format!("{}/tests/fixtures/{}", env!("CARGO_MANIFEST_DIR"), name)
 }
 
+/// A scratch path under the OS temp dir (never inside the repo).
+fn scratch(name: &str) -> String {
+    std::env::temp_dir()
+        .join(format!("genie-test-{name}"))
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// Remove a path whether it's a file or a directory (lbug DBs are files).
+fn rm(path: &str) {
+    let _ = std::fs::remove_dir_all(path);
+    let _ = std::fs::remove_file(path);
+}
+
 // ---- fast (no model) ----
 
 #[test]
@@ -98,11 +112,11 @@ fn pptx_answer() {
 #[test]
 #[ignore = "indexes a dir + runs the model; slow"]
 fn dir_kb_incremental_and_cache() {
-    // Isolated cache so we don't touch ~/.genie.
-    let cache = format!("{}/target/test-m3-cache", env!("CARGO_MANIFEST_DIR"));
-    let dir = format!("{}/target/test-m3-dir", env!("CARGO_MANIFEST_DIR"));
-    let _ = std::fs::remove_dir_all(&cache);
-    let _ = std::fs::remove_dir_all(format!("{cache}.meta"));
+    // Isolated cache under the OS temp dir so we don't touch ~/.genie or the repo.
+    let cache = scratch("m3-cache");
+    let dir = scratch("m3-dir");
+    rm(&cache);
+    rm(&format!("{cache}.meta"));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(format!("{dir}/apollo.txt"), "Project Apollo is owned by Jane Smith.\n").unwrap();
     std::fs::write(format!("{dir}/zeus.md"), "Project Zeus is owned by Bob Jones.\n").unwrap();
@@ -140,11 +154,11 @@ fn dir_kb_incremental_and_cache() {
 #[test]
 #[ignore = "indexes a dir + builds the graph + runs the model; slow"]
 fn graph_build_stats_and_correlate() {
-    let cache = format!("{}/target/test-m4-cache", env!("CARGO_MANIFEST_DIR"));
-    let graph = format!("{}/target/test-m4-graph", env!("CARGO_MANIFEST_DIR"));
-    let dir = format!("{}/target/test-m4-dir", env!("CARGO_MANIFEST_DIR"));
+    let cache = scratch("m4-cache");
+    let graph = scratch("m4-graph");
+    let dir = scratch("m4-dir");
     for p in [&cache, &format!("{cache}.meta"), &graph, &dir] {
-        let _ = std::fs::remove_dir_all(p);
+        rm(p);
     }
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(format!("{dir}/apollo.txt"), "Project Apollo is owned by Jane Smith and built by Acme Corporation.\n").unwrap();
@@ -179,6 +193,6 @@ fn graph_build_stats_and_correlate() {
     assert!(String::from_utf8_lossy(&out.stdout).contains("Acme Corporation"));
 
     for p in [&cache, &format!("{cache}.meta"), &graph, &dir] {
-        let _ = std::fs::remove_dir_all(p);
+        rm(p);
     }
 }
