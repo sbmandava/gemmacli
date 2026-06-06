@@ -93,6 +93,18 @@ chmod +x "$INSTALL_DIR/gemma"
 
 mkdir -p "$CACHE_DIR"   # vector cache lives here (recreated if deleted)
 
+# Pick the default model from system RAM: <6GB -> e2b, >=6GB -> e4b.
+if [ ! -s "$CACHE_DIR/model_default" ]; then
+    if [ "$(uname)" = "Darwin" ]; then
+        mem_bytes="$(sysctl -n hw.memsize 2>/dev/null || echo 0)"
+    else
+        mem_bytes="$(( $(awk '/MemTotal/{print $2}' /proc/meminfo 2>/dev/null || echo 0) * 1024 ))"
+    fi
+    mem_gb=$(( mem_bytes / 1024 / 1024 / 1024 ))
+    if [ "$mem_gb" -ge 6 ]; then echo e4b > "$CACHE_DIR/model_default"; else echo e2b > "$CACHE_DIR/model_default"; fi
+    say "Default model: $(cat "$CACHE_DIR/model_default") (system RAM: ${mem_gb}GB)"
+fi
+
 # ---------------------------------------------------------------------------
 # 4. Symlink `gemma` onto the PATH
 # ---------------------------------------------------------------------------

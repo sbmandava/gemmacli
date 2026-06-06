@@ -29,6 +29,7 @@ done
 GRAPH_DB="${GEMMA_GRAPH_DB:-$HOME/.gemma/gemma-graph.lbug}"
 GRAPH_LOG="${GEMMA_GRAPH_LOG:-$HOME/.gemma/graph-update.log}"
 BACKEND_CACHE="${GEMMA_BACKEND_CACHE:-$HOME/.gemma/backend}"
+MODEL_DEFAULT_FILE="${GEMMA_MODEL_DEFAULT_FILE:-$HOME/.gemma/model_default}"
 RAG_THRESHOLD_CHARS="${GEMMA_RAG_THRESHOLD:-14000}"   # ~3500 tokens
 RAG_TOPK="${GEMMA_RAG_TOPK:-15}"
 RAG_TTL="${GEMMA_CACHE_TTL:-86400}"   # evict cached tables idle >24h
@@ -44,7 +45,8 @@ usage() {
 Usage: $(basename "$0") [--model e2b|e4b] [--txt PATH | --doc PATH | --dir PATH] (--ask "QUESTION" | --image PATH | --audio PATH)
 
 Options:
-  --model e2b|e4b    Select model variant (default: e4b; pass e2b for a faster, lighter run)
+  --model e2b|e4b    Select model variant (default set at install by RAM:
+                     <6GB -> e2b, >=6GB -> e4b; override here or via GEMMA_MODEL)
   --ask "QUESTION"   Run text prompt (combine with --txt/--doc/--dir to analyze files)
   --txt PATH         Attach a text/CSV file's contents to the --ask prompt
   --doc PATH         Extract a document's text (PDF/DOCX/XLSX/PPTX/image via
@@ -123,6 +125,7 @@ check_deps() {
     elif [[ -s "$BACKEND_CACHE" ]]; then be="$(cat "$BACKEND_CACHE") (auto-detected)"
     else be="not detected yet — run a query once"; fi
     printf '  %-9s %s\n' "[info]" "compute backend: $be"
+    printf '  %-9s %s\n' "[info]" "default model: $(resolve_default_model) (system RAM: $(detect_total_gb)GB; override with --model / GEMMA_MODEL)"
 
     echo
     if [[ $issues -eq 0 ]]; then
@@ -130,6 +133,24 @@ check_deps() {
     else
         echo "Issues: $issues required dependency(ies) missing (see above)."
     fi
+}
+
+detect_total_gb() {  # total system RAM in whole GB
+    local bytes=0
+    if [[ "$(uname)" == "Darwin" ]]; then
+        bytes=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+    elif [[ -r /proc/meminfo ]]; then
+        bytes=$(( $(awk '/MemTotal/{print $2}' /proc/meminfo 2>/dev/null || echo 0) * 1024 ))
+    fi
+    echo $(( bytes / 1024 / 1024 / 1024 ))
+}
+
+# Default model: GEMMA_MODEL env > cached choice (set at install from RAM) >
+# runtime RAM check (>=6GB -> e4b, else e2b).
+resolve_default_model() {
+    if [[ -n "${GEMMA_MODEL:-}" ]]; then printf '%s' "$GEMMA_MODEL"; return; fi
+    if [[ -s "$MODEL_DEFAULT_FILE" ]]; then cat "$MODEL_DEFAULT_FILE"; return; fi
+    [[ "$(detect_total_gb)" -ge 6 ]] && printf 'e4b' || printf 'e2b'
 }
 
 ensure_uvx() {
@@ -209,7 +230,7 @@ resolve_backend() {
     printf '%s' "$b"
 }
 
-model_variant="e4b"   # default to the stronger model; override with --model e2b
+model_variant="$(resolve_default_model)"   # RAM-based default; override with --model
 model_explicit=false
 action=""
 arg=""

@@ -127,6 +127,7 @@ gemma --graph-query "MATCH (f:File)-[:Mentions]->(e:Entity) RETURN f.name,e.name
 | `GEMMA_CACHE_TTL` | `86400` | evict cached tables/graph idle longer than this (seconds) |
 | `GEMMA_GRAPH_DB` | `~/.gemma/gemma-graph.lbug` | LadybugDB correlation-graph file |
 | `GEMMA_BACKEND` | auto | force `gpu` or `cpu` (otherwise auto-detected and cached) |
+| `GEMMA_MODEL` | auto | force `e2b`/`e4b` (default set at install from RAM: <6GB→e2b, ≥6GB→e4b) |
 | `HF_HOME` | `~/.cache/huggingface` | model cache root |
 
 Installer-only: `GEMMA_INSTALL_DIR`, `GEMMA_BIN_DIR`, `GEMMA_RAW_BASE`,
