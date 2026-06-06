@@ -265,6 +265,20 @@ indexed in the last 24h. Everything runs locally.
 
 ---
 
+### Is it built on Ollama or llama.cpp?
+
+**No.** Gemma Genie runs on **Google's LiteRT-LM** — the on-device LLM runtime
+built on **LiteRT, the lightweight successor to TensorFlow Lite** for edge
+devices. It's a lean, edge-first stack designed to run efficiently on **laptops
+and even cell phones**, not just heavyweight servers.
+
+That edge focus is exactly the point: the same kind of engine that powers
+on-device AI in phones runs your private assistant here. Huge thanks to
+**Google** and **DeepMind** for these innovations — and with their pace, it's
+only going to get better.
+
+---
+
 ### Does my data leave my laptop?
 
 **No.** Your documents, questions, embeddings, and the graph never leave the
