@@ -31,6 +31,11 @@ The installer is idempotent and bootstraps **everything** on a fresh machine:
 
 Re-run it any time to repair an install or after deleting `~/.gemma`.
 
+> **Runs offline.** Network is only needed for the one-time install (downloading
+> `uv`, the Python deps, and the Gemma model weights). Once those are cached,
+> `gemma` runs entirely on-device from the command line — no cloud, no API keys,
+> no internet required. Your documents never leave the machine.
+
 ## Usage
 
 ```bash
