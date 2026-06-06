@@ -197,8 +197,15 @@ genie --ask "what changed?" --dir ~/project-docs
 ### What are my laptop requirements?
 
 **Preferred hardware:** an **Apple MacBook with an M-series chip (M1/M2/M3/M4)
-and 16 GB of RAM**. The unified memory and GPU give the smoothest experience and
-run the stronger **e4b** model comfortably.
+and 16 GB of RAM** — though **8 GB works just as well** for everyday use. The
+unified memory and GPU give the smoothest experience and run the stronger **e4b**
+model comfortably.
+
+**No idle footprint.** Gemma Genie is **not a daemon** — there's no resident
+process and **zero memory/CPU usage when you're not using it**. It only runs
+while a `genie` command is executing: it loads the model, answers, and exits,
+freeing all memory. (Indexing kicks off a short background job to update the
+graph, but that finishes and exits on its own — nothing stays resident.)
 
 | Resource | Minimum | Recommended |
 |----------|---------|-------------|
