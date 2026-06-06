@@ -144,6 +144,10 @@ import lancedb  # noqa: F401
 PY
     fi
 
+    say "Pre-fetching ladybug (graph correlation)…"
+    uvx --python 3.12 --with ladybug python -c "import ladybug" >/dev/null 2>&1 \
+        || warn "ladybug prefetch failed"
+
     if [ "${GEMMA_SKIP_MODELS:-0}" != "1" ]; then
         for spec in "${MODEL_SPECS[@]}"; do
             repo="${spec%%|*}"; file="${spec##*|}"

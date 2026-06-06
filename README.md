@@ -36,6 +36,12 @@ gemma --ask "Who is blocked?" --txt tasks.csv
 # Query an entire folder (recursive knowledge base)
 gemma --ask "What's our vacation policy and who owns project X?" --dir ~/notes
 
+# Graph correlation across a folder (LadybugDB)
+gemma graph build --dir ~/notes        # extract entities, build a graph
+gemma graph hubs                       # entities spanning the most files
+gemma graph related "DirecTV"          # files/entities correlated with one
+gemma graph related "report.pdf"       # files sharing entities with a file
+
 # Vision / audio
 gemma --image photo.jpg
 gemma --audio clip.wav
@@ -72,6 +78,11 @@ gemma cache clear          # wipe the vector cache
 - **`--dir`**: recursively ingests all supported files into one LanceDB table,
   re-embedding only files that changed, and retrieves across all of them
   (each excerpt is labeled with its source file).
+- **`graph`**: builds a `(:File)-[:Mentions]->(:Entity)` property graph in
+  **LadybugDB** from a folder (entities extracted heuristically, or with
+  `--llm` via Gemma), then answers correlation queries — shared entities,
+  files linked through them, entity hubs, or raw Cypher. The graph is a local
+  `.lbug` file at `~/.gemma/gemma-graph.lbug` and is auto-cleared after 24h idle.
 
 ## Layout
 
@@ -89,7 +100,8 @@ gemma cache clear          # wipe the vector cache
 | `GEMMA_RAG_THRESHOLD` | `14000` | char threshold before RAG kicks in |
 | `GEMMA_RAG_TOPK` | `6` | chunks retrieved per query (`--top-k`) |
 | `GEMMA_CHUNK_SIZE` | `1000` | characters per chunk (`--chunk-size`) |
-| `GEMMA_CACHE_TTL` | `86400` | evict cached tables idle longer than this (seconds) |
+| `GEMMA_CACHE_TTL` | `86400` | evict cached tables/graph idle longer than this (seconds) |
+| `GEMMA_GRAPH_DB` | `~/.gemma/gemma-graph.lbug` | LadybugDB correlation-graph file |
 | `HF_HOME` | `~/.cache/huggingface` | model cache root |
 
 Installer-only: `GEMMA_INSTALL_DIR`, `GEMMA_BIN_DIR`, `GEMMA_RAW_BASE`,
@@ -103,5 +115,6 @@ Installer-only: `GEMMA_INSTALL_DIR`, `GEMMA_BIN_DIR`, `GEMMA_RAW_BASE`,
   — the on-device runtime (`litert-lm`) used to run the models.
 
 Also built on [LanceDB](https://lancedb.github.io/lancedb/),
+[LadybugDB](https://github.com/LadybugDB/ladybug) (embedded Cypher graph DB),
 [model2vec](https://github.com/MinishLab/model2vec), and
 [liteparse](https://pypi.org/project/liteparse/).

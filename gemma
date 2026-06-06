@@ -21,6 +21,12 @@ for cand in "/opt/projects/unovie/gemmacli/gemma_rag.py" "$HOME/.gemma/gemma_rag
     [[ -f "$RAG_HELPER" ]] && break
     RAG_HELPER="$cand"
 done
+GRAPH_HELPER="$SCRIPT_DIR/gemma_graph.py"
+for cand in "/opt/projects/unovie/gemmacli/gemma_graph.py" "$HOME/.gemma/gemma_graph.py"; do
+    [[ -f "$GRAPH_HELPER" ]] && break
+    GRAPH_HELPER="$cand"
+done
+GRAPH_DB="${GEMMA_GRAPH_DB:-$HOME/.gemma/gemma-graph.lbug}"
 RAG_THRESHOLD_CHARS="${GEMMA_RAG_THRESHOLD:-14000}"   # ~3500 tokens
 RAG_TOPK="${GEMMA_RAG_TOPK:-6}"
 RAG_TTL="${GEMMA_CACHE_TTL:-86400}"   # evict cached tables idle >24h
@@ -54,6 +60,7 @@ Options:
 Subcommands:
   doctor             Run the dependency check and exit
   cache [info|list|clear]   Inspect or clear the LanceDB vector cache
+  graph <cmd>        Build/query a LadybugDB correlation graph (see: graph --help)
 
 Piped input: when no --txt/--doc/--dir is given, stdin is read as the document,
   e.g.  cat notes.txt | $(basename "$0") --ask "summarize this"
@@ -101,7 +108,7 @@ check_deps() {
         printf '  %-9s %s\n' "" "install: brew install --cask libreoffice"
     fi
 
-    printf '  %-9s %s\n' "[note]" "liteparse, litert-lm, lancedb, model2vec auto-install via uvx on first use"
+    printf '  %-9s %s\n' "[note]" "liteparse, litert-lm, lancedb, model2vec, ladybug auto-install via uvx on first use"
 
     echo
     if [[ $issues -eq 0 ]]; then
@@ -160,6 +167,74 @@ cmd_cache() {
     esac
 }
 
+graph_model_path() {  # echo cached E4B model path (for --llm extraction), if present
+    local repo="litert-community/gemma-4-E4B-it-litert-lm" file="gemma-4-E4B-it.litertlm"
+    find "$HF_HOME/hub/models--${repo//\//--}/snapshots" -name "$file" 2>/dev/null | head -1
+}
+
+cmd_graph() {
+    local sub="${1:-}"; [[ $# -gt 0 ]] && shift
+    local call=(uvx --python 3.12 --with ladybug python "$GRAPH_HELPER" --db "$GRAPH_DB" --ttl "$RAG_TTL")
+    case "$sub" in
+        build)
+            local g_dir="" g_llm=0
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --dir) [[ -n "${2:-}" ]] || { echo "Error: --dir requires a value" >&2; return 1; }; g_dir="$2"; shift 2 ;;
+                    --llm) g_llm=1; shift ;;
+                    *) echo "Error: unknown 'graph build' argument: $1" >&2; return 1 ;;
+                esac
+            done
+            [[ -n "$g_dir" ]] || { echo "Usage: $(basename "$0") graph build --dir PATH [--llm]" >&2; return 1; }
+            [[ -d "$g_dir" ]] || { echo "Error: directory not found: $g_dir" >&2; return 1; }
+            ensure_uvx
+            mkdir -p "$(dirname "$GRAPH_DB")"
+            local extra=(--dir "$g_dir" --recursive)
+            if [[ $g_llm -eq 1 ]]; then
+                local mp; mp="$(graph_model_path)"
+                if [[ -n "$mp" ]]; then
+                    extra+=(--llm --model "$mp")
+                else
+                    echo "Note: e4b model not cached yet — using heuristic extraction." >&2
+                fi
+            fi
+            echo "Building correlation graph from \"$g_dir\"..." >&2
+            "${call[@]}" --mode build "${extra[@]}"
+            ;;
+        related)
+            [[ -n "${1:-}" ]] || { echo "Usage: $(basename "$0") graph related \"<file-or-entity>\"" >&2; return 1; }
+            ensure_uvx; "${call[@]}" --mode related --name "$1"
+            ;;
+        hubs)  ensure_uvx; "${call[@]}" --mode hubs ;;
+        stats) ensure_uvx; "${call[@]}" --mode stats ;;
+        query)
+            [[ -n "${1:-}" ]] || { echo "Usage: $(basename "$0") graph query \"<cypher>\"" >&2; return 1; }
+            ensure_uvx; "${call[@]}" --mode query --cypher "$1"
+            ;;
+        ""|-h|--help)
+            cat <<EOF
+Usage: $(basename "$0") graph <command>
+
+  build --dir PATH [--llm]   Build a File→Entity correlation graph from a folder
+                             (--llm refines entities with Gemma; slower)
+  related "<file|entity>"    Files/entities correlated with the given one
+  hubs                       Entities spanning the most files
+  stats                      Node/edge counts
+  query "<cypher>"           Run a raw Cypher query
+
+Graph stored at: $GRAPH_DB  (override with GEMMA_GRAPH_DB)
+EOF
+            [[ "$sub" == "-h" || "$sub" == "--help" ]] && return 0
+            [[ -z "$sub" ]] && return 0
+            return 1
+            ;;
+        *)
+            echo "Error: unknown graph command: $sub (try 'graph --help')" >&2
+            return 1
+            ;;
+    esac
+}
+
 model_variant="e2b"
 model_explicit=false
 action=""
@@ -174,6 +249,7 @@ case "${1:-}" in
     -V|--version|version) echo "gemma $VERSION"; exit 0 ;;
     doctor)               echo "gemma $VERSION"; check_deps; exit 0 ;;
     cache)                shift; cmd_cache "$@"; exit $? ;;
+    graph)                shift; cmd_graph "$@"; exit $? ;;
 esac
 
 while [[ $# -gt 0 ]]; do
