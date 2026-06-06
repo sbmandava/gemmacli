@@ -131,6 +131,37 @@ GPUs to provision, no infrastructure to maintain, no fine-tuning required.
 
 ---
 
+## Why offline matters: security, governance, privacy & compliance
+
+Running **entirely on-device** removes the single biggest risk in most AI tools:
+**your data leaving for someone else's servers.** That changes the conversation
+for regulated and security-conscious teams.
+
+- **Data residency & sovereignty.** Nothing leaves the laptop, so data never
+  crosses borders or lands in a vendor cloud — simplifying GDPR, data-residency,
+  and sovereignty requirements.
+- **Confidentiality & NDAs.** Client-confidential, M&A, legal, and board
+  material can be analyzed with **no third-party processor or sub-processor** in
+  the chain.
+- **Regulated industries.** A fit where third-party data sharing is restricted —
+  healthcare (PHI/HIPAA), finance (PCI/SOX/MNPI), legal privilege,
+  government/defense, and IP-sensitive R&D.
+- **No training on your data.** Your documents are never used to train anyone's
+  model, and there's no vendor-side prompt/response logging.
+- **Air-gapped & field use.** Works with no network at all — secure facilities,
+  classified environments, ships, planes, and remote sites.
+- **Minimal, auditable footprint.** A small local index that **auto-expires
+  after 24h** means less data at rest to govern; you control what's indexed and
+  when it's purged (`genie cache clear`, `rm -rf ~/.genie`).
+- **No vendor lock-in or outages.** No API keys to rotate, no surprise per-token
+  bills, no dependency on a provider's uptime or shifting data policies.
+
+> **Note:** Gemma Genie keeps *your data on-device*, which removes a major
+> compliance risk — but it is **not a certification**. You remain responsible for
+> device security, access control, and your organization's overall compliance.
+
+---
+
 ## Working examples
 
 ```bash
