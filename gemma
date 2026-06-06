@@ -1,0 +1,299 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Resolve the real location of this script, following symlinks. This lets the
+# script be invoked via a symlink (e.g. /usr/local/bin/gemma -> the real script)
+# while still finding its Python helper next to it.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+
+# RAG settings: for large files, retrieve only the relevant chunks via LanceDB
+# instead of stuffing the whole document into the (4096-token) context window.
+RAG_DB="${GEMMA_CACHE_DB:-$HOME/.gemma/gemma-cache.db}"
+RAG_HELPER="$SCRIPT_DIR/gemma_rag.py"
+# Fallbacks if invoked as a bare copy rather than alongside its helper.
+for cand in "/opt/projects/unovie/gemmacli/gemma_rag.py" "$HOME/.gemma/gemma_rag.py"; do
+    [[ -f "$RAG_HELPER" ]] && break
+    RAG_HELPER="$cand"
+done
+RAG_THRESHOLD_CHARS="${GEMMA_RAG_THRESHOLD:-14000}"   # ~3500 tokens
+RAG_TOPK="${GEMMA_RAG_TOPK:-6}"
+RAG_TTL="${GEMMA_CACHE_TTL:-86400}"   # evict cached tables idle >24h
+
+# All models (Gemma weights + the model2vec embedder) live in the HuggingFace
+# hub cache: ${HF_HOME:-$HOME/.cache/huggingface}/hub
+export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [--model e2b|e4b] [--txt PATH | --doc PATH | --dir PATH] (--ask "QUESTION" | --image PATH | --audio PATH)
+
+Options:
+  --model e2b|e4b    Select model variant (default: e2b; e4b when --txt/--doc/--dir is used)
+  --ask "QUESTION"   Run text prompt (combine with --txt/--doc/--dir to analyze files)
+  --txt PATH         Attach a text/CSV file's contents to the --ask prompt
+  --doc PATH         Extract a document's text (PDF/DOCX/XLSX/PPTX/image via
+                     liteparse) into the --ask prompt
+  --dir PATH         Ingest all supported files in a directory (recursively) into
+                     the LanceDB cache and answer from the most relevant chunks
+  --pages RANGE      Limit --doc extraction to these pages, e.g. "1-5,10,15-20"
+  --image PATH       Describe the given image using vision backend
+  --audio PATH       Transcribe the given audio file using audio backend
+  -h, --help         Show this help and exit
+EOF
+}
+
+help_extra() {
+    cat <<EOF
+
+Large files (>${RAG_THRESHOLD_CHARS} chars) are automatically chunked, embedded
+(model2vec) and stored in a LanceDB cache at:
+  ${RAG_DB}
+Only the chunks most relevant to your question are sent to the model.
+Cached tables idle for >24h are evicted automatically on the next run.
+
+Models (Gemma weights + embedder) are stored in the HuggingFace hub cache:
+  ${HF_HOME}/hub
+Env overrides: GEMMA_CACHE_DB, GEMMA_RAG_THRESHOLD, GEMMA_RAG_TOPK, GEMMA_CACHE_TTL, HF_HOME
+EOF
+}
+
+check_deps() {
+    local issues=0
+    echo
+    echo "Dependency check:"
+
+    if command -v uvx >/dev/null 2>&1; then
+        printf '  %-9s %s\n' "[ok]" "uvx (uv) — runs the model, liteparse, and RAG"
+    else
+        printf '  %-9s %s\n' "[MISSING]" "uvx (uv) — REQUIRED. Install: https://docs.astral.sh/uv/"
+        issues=$((issues + 1))
+    fi
+
+    if [[ -f "$RAG_HELPER" ]]; then
+        printf '  %-9s %s\n' "[ok]" "RAG helper ($RAG_HELPER)"
+    else
+        printf '  %-9s %s\n' "[MISSING]" "RAG helper not found at $RAG_HELPER — large-file retrieval disabled"
+        issues=$((issues + 1))
+    fi
+
+    if command -v soffice >/dev/null 2>&1; then
+        printf '  %-9s %s\n' "[ok]" "LibreOffice (soffice) — enables DOCX/XLSX/PPTX via --doc"
+    else
+        printf '  %-9s %s\n' "[warn]" "LibreOffice (soffice) not found — DOCX/XLSX/PPTX need it (PDF/images are fine)"
+        printf '  %-9s %s\n' "" "install: brew install --cask libreoffice"
+    fi
+
+    printf '  %-9s %s\n' "[note]" "liteparse, litert-lm, lancedb, model2vec auto-install via uvx on first use"
+
+    echo
+    if [[ $issues -eq 0 ]]; then
+        echo "All required dependencies present."
+    else
+        echo "Issues: $issues required dependency(ies) missing (see above)."
+    fi
+}
+
+ensure_uvx() {
+    command -v uvx >/dev/null 2>&1 && return 0
+    echo "uv (uvx) not found — installing via https://astral.sh/uv ..." >&2
+    curl -LsSf https://astral.sh/uv/install.sh | sh >&2 || {
+        echo "Error: failed to install uv. See https://docs.astral.sh/uv/" >&2
+        exit 1
+    }
+    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+    command -v uvx >/dev/null 2>&1 || {
+        echo "Error: uv installed but uvx not on PATH. Open a new shell and retry." >&2
+        exit 1
+    }
+    echo "uv installed." >&2
+}
+
+model_variant="e2b"
+model_explicit=false
+action=""
+arg=""
+txt_path=""
+doc_path=""
+dir_path=""
+pages=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --model)
+            [[ $# -ge 2 ]] || { echo "Error: --model requires a value" >&2; usage; exit 1; }
+            case "$2" in
+                e2b|e4b) model_variant="$2"; model_explicit=true ;;
+                *) echo "Error: --model must be e2b or e4b" >&2; exit 1 ;;
+            esac
+            shift 2
+            ;;
+        --txt)
+            [[ $# -ge 2 && -n "${2:-}" ]] || { echo "Error: --txt requires a value" >&2; usage; exit 1; }
+            [[ -f "$2" ]] || { echo "Error: text file not found: $2" >&2; exit 1; }
+            txt_path="$2"
+            shift 2
+            ;;
+        --doc)
+            [[ $# -ge 2 && -n "${2:-}" ]] || { echo "Error: --doc requires a value" >&2; usage; exit 1; }
+            [[ -f "$2" ]] || { echo "Error: document not found: $2" >&2; exit 1; }
+            doc_path="$2"
+            shift 2
+            ;;
+        --dir)
+            [[ $# -ge 2 && -n "${2:-}" ]] || { echo "Error: --dir requires a value" >&2; usage; exit 1; }
+            [[ -d "$2" ]] || { echo "Error: directory not found: $2" >&2; exit 1; }
+            dir_path="$2"
+            shift 2
+            ;;
+        --pages)
+            [[ $# -ge 2 && -n "${2:-}" ]] || { echo "Error: --pages requires a value" >&2; usage; exit 1; }
+            pages="$2"
+            shift 2
+            ;;
+        --ask|--image|--audio)
+            [[ -z "$action" ]] || { echo "Error: only one of --ask/--image/--audio allowed" >&2; exit 1; }
+            [[ $# -ge 2 && -n "${2:-}" ]] || { echo "Error: $1 requires a value" >&2; usage; exit 1; }
+            action="$1"
+            arg="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            help_extra
+            check_deps
+            exit 0
+            ;;
+        *)
+            echo "Error: unknown argument: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$action" ]]; then
+    usage
+    exit 1
+fi
+
+inputs=0
+[[ -n "$txt_path" ]] && inputs=$((inputs + 1))
+[[ -n "$doc_path" ]] && inputs=$((inputs + 1))
+[[ -n "$dir_path" ]] && inputs=$((inputs + 1))
+if [[ $inputs -gt 1 ]]; then
+    echo "Error: use only one of --txt, --doc or --dir" >&2
+    exit 1
+fi
+
+if [[ $inputs -eq 1 && "$action" != "--ask" ]]; then
+    echo "Error: --txt/--doc/--dir can only be used with --ask" >&2
+    exit 1
+fi
+
+if [[ -n "$pages" && -z "$doc_path" ]]; then
+    echo "Error: --pages requires --doc" >&2
+    exit 1
+fi
+
+# File analysis (--txt/--doc/--dir) is a heavier task; default to the stronger
+# e4b model unless the user explicitly picked one with --model.
+if [[ $inputs -eq 1 && "$model_explicit" == false ]]; then
+    model_variant="e4b"
+fi
+
+# Run models straight from the HuggingFace hub cache (~/.cache/huggingface/hub)
+# via --from-huggingface-repo, so weights are stored only there and litert-lm
+# never makes a second copy under ~/.litert-lm.
+case "$model_variant" in
+    e2b) HF_REPO="litert-community/gemma-4-E2B-it-litert-lm"; MODEL_FILE="gemma-4-E2B-it.litertlm" ;;
+    e4b) HF_REPO="litert-community/gemma-4-E4B-it-litert-lm"; MODEL_FILE="gemma-4-E4B-it.litertlm" ;;
+esac
+LITERT_RUN=(uvx litert-lm run --from-huggingface-repo "$HF_REPO" "$MODEL_FILE")
+
+ensure_uvx  # install uv on demand if it's missing
+
+case "$action" in
+    --ask)
+        prompt="$arg"
+        if [[ -n "$dir_path" ]]; then
+            # Directory knowledge base: ingest (incrementally) and retrieve.
+            mkdir -p "$(dirname "$RAG_DB")"
+            echo "Indexing \"$dir_path\" into LanceDB (incremental)..." >&2
+            context="$(uvx --python 3.12 --with lancedb --with model2vec \
+                python "$RAG_HELPER" \
+                --db "$RAG_DB" \
+                --dir "$dir_path" \
+                --recursive \
+                --query "$arg" \
+                --top-k "$RAG_TOPK" \
+                --ttl "$RAG_TTL")"
+            prompt="$arg
+
+Use the following excerpts from files in \"$dir_path\" to answer
+(each excerpt is labeled with its source file):
+
+$context"
+            "${LITERT_RUN[@]}" --backend=gpu --prompt="$prompt"
+            exit 0
+        fi
+
+        src=""
+        extracted=""
+        if [[ -n "$txt_path" ]]; then
+            src="$txt_path"
+            extracted="$(cat "$txt_path")"
+        elif [[ -n "$doc_path" ]]; then
+            src="$doc_path"
+            parse_args=(--quiet "$doc_path")
+            [[ -n "$pages" ]] && parse_args+=(--target-pages "$pages")
+            extracted="$(uvx --from liteparse lit parse "${parse_args[@]}")"
+        fi
+
+        if [[ -n "$src" ]]; then
+            if [[ ${#extracted} -gt $RAG_THRESHOLD_CHARS ]]; then
+                # Large file: retrieve only the relevant chunks via LanceDB.
+                mkdir -p "$(dirname "$RAG_DB")"
+                cache_key="$src|$(stat -f '%z-%m' "$src")|pages=${pages}"
+                echo "Large input (${#extracted} chars) — retrieving relevant chunks via LanceDB..." >&2
+                context="$(printf '%s' "$extracted" | uvx --python 3.12 --with lancedb --with model2vec \
+                    python "$RAG_HELPER" \
+                    --db "$RAG_DB" \
+                    --cache-key "$cache_key" \
+                    --query "$arg" \
+                    --top-k "$RAG_TOPK" \
+                    --ttl "$RAG_TTL")"
+                prompt="$arg
+
+Use the following excerpts from \"$(basename "$src")\" to answer:
+
+$context"
+            else
+                prompt="$arg
+
+Analyze the following document (\"$(basename "$src")\"):
+
+$extracted"
+            fi
+        fi
+
+        "${LITERT_RUN[@]}" \
+            --backend=gpu \
+            --prompt="$prompt"
+        ;;
+    --image)
+        "${LITERT_RUN[@]}" \
+            --backend=gpu --vision-backend gpu \
+            --attachment "$arg" --prompt describe
+        ;;
+    --audio)
+        "${LITERT_RUN[@]}" \
+            --backend=gpu --audio-backend cpu \
+            --attachment "$arg" --prompt transcribe
+        ;;
+esac
