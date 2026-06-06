@@ -14,28 +14,28 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
 
 # RAG settings: for large files, retrieve only the relevant chunks via LanceDB
 # instead of stuffing the whole document into the (4096-token) context window.
-RAG_DB="${GEMMA_CACHE_DB:-$HOME/.gemma/gemma-cache.db}"
-RAG_HELPER="$SCRIPT_DIR/gemma_rag.py"
+RAG_DB="${GENIE_CACHE_DB:-$HOME/.genie/genie-cache.db}"
+RAG_HELPER="$SCRIPT_DIR/genie_rag.py"
 # Fallbacks if invoked as a bare copy rather than alongside its helper.
-for cand in "/opt/projects/unovie/gemmacli/gemma_rag.py" "$HOME/.gemma/gemma_rag.py"; do
+for cand in "/opt/projects/unovie/gemmacli/genie_rag.py" "$HOME/.genie/genie_rag.py"; do
     [[ -f "$RAG_HELPER" ]] && break
     RAG_HELPER="$cand"
 done
-GRAPH_HELPER="$SCRIPT_DIR/gemma_graph.py"
-for cand in "/opt/projects/unovie/gemmacli/gemma_graph.py" "$HOME/.gemma/gemma_graph.py"; do
+GRAPH_HELPER="$SCRIPT_DIR/genie_graph.py"
+for cand in "/opt/projects/unovie/gemmacli/genie_graph.py" "$HOME/.genie/genie_graph.py"; do
     [[ -f "$GRAPH_HELPER" ]] && break
     GRAPH_HELPER="$cand"
 done
-GRAPH_DB="${GEMMA_GRAPH_DB:-$HOME/.gemma/gemma-graph.lbug}"
-GRAPH_LOG="${GEMMA_GRAPH_LOG:-$HOME/.gemma/graph-update.log}"
-BACKEND_CACHE="${GEMMA_BACKEND_CACHE:-$HOME/.gemma/backend}"
-MODEL_DEFAULT_FILE="${GEMMA_MODEL_DEFAULT_FILE:-$HOME/.gemma/model_default}"
-RAW_BASE="${GEMMA_RAW_BASE:-https://raw.githubusercontent.com/sbmandava/gemma-genie/main}"
-UPDATE_STAMP="${GEMMA_UPDATE_STAMP:-$HOME/.gemma/last_update_check}"
-RAG_THRESHOLD_CHARS="${GEMMA_RAG_THRESHOLD:-14000}"   # ~3500 tokens
-RAG_TOPK="${GEMMA_RAG_TOPK:-15}"
-RAG_TTL="${GEMMA_CACHE_TTL:-86400}"   # evict cached tables idle >24h
-CHUNK_SIZE="${GEMMA_CHUNK_SIZE:-}"    # chars per chunk (empty = helper default)
+GRAPH_DB="${GENIE_GRAPH_DB:-$HOME/.genie/genie-graph.lbug}"
+GRAPH_LOG="${GENIE_GRAPH_LOG:-$HOME/.genie/graph-update.log}"
+BACKEND_CACHE="${GENIE_BACKEND_CACHE:-$HOME/.genie/backend}"
+MODEL_DEFAULT_FILE="${GENIE_MODEL_DEFAULT_FILE:-$HOME/.genie/model_default}"
+RAW_BASE="${GENIE_RAW_BASE:-https://raw.githubusercontent.com/sbmandava/gemma-genie/main}"
+UPDATE_STAMP="${GENIE_UPDATE_STAMP:-$HOME/.genie/last_update_check}"
+RAG_THRESHOLD_CHARS="${GENIE_RAG_THRESHOLD:-14000}"   # ~3500 tokens
+RAG_TOPK="${GENIE_RAG_TOPK:-15}"
+RAG_TTL="${GENIE_CACHE_TTL:-86400}"   # evict cached tables idle >24h
+CHUNK_SIZE="${GENIE_CHUNK_SIZE:-}"    # chars per chunk (empty = helper default)
 VERSION="0.2.1"
 
 # All models (Gemma weights + the model2vec embedder) live in the HuggingFace
@@ -48,7 +48,7 @@ Usage: $(basename "$0") [--model e2b|e4b] [--txt PATH | --doc PATH | --dir PATH]
 
 Options:
   --model e2b|e4b    Select model variant (default set at install by RAM:
-                     <6GB -> e2b, >=6GB -> e4b; override here or via GEMMA_MODEL)
+                     <6GB -> e2b, >=6GB -> e4b; override here or via GENIE_MODEL)
   --ask "QUESTION"   Run text prompt (combine with --txt/--doc/--dir to analyze files)
   --txt PATH         Attach a text/CSV file's contents to the --ask prompt
   --doc PATH         Extract a document's text (PDF/DOCX/XLSX/PPTX/image via
@@ -73,7 +73,7 @@ Subcommands / inspection:
 Analyzing files with --txt/--doc/--dir also auto-updates a LadybugDB
 correlation graph (entities per file; --dir uses Gemma for extraction). A bare
 --ask automatically consults whatever you've indexed in the last 24h (LanceDB
-chunks + graph correlations). Both caches live under ~/.gemma and expire after 24h.
+chunks + graph correlations). Both caches live under ~/.genie and expire after 24h.
 
 Piped input: when no --txt/--doc/--dir is given, stdin is read as the document,
   e.g.  cat notes.txt | $(basename "$0") --ask "summarize this"
@@ -91,7 +91,7 @@ Cached tables idle for >24h are evicted automatically on the next run.
 
 Models (Gemma weights + embedder) are stored in the HuggingFace hub cache:
   ${HF_HOME}/hub
-Env overrides: GEMMA_CACHE_DB, GEMMA_RAG_THRESHOLD, GEMMA_RAG_TOPK, GEMMA_CACHE_TTL, HF_HOME
+Env overrides: GENIE_CACHE_DB, GENIE_RAG_THRESHOLD, GENIE_RAG_TOPK, GENIE_CACHE_TTL, HF_HOME
 EOF
 }
 
@@ -124,11 +124,11 @@ check_deps() {
     printf '  %-9s %s\n' "[note]" "liteparse, litert-lm, lancedb, model2vec, ladybug auto-install via uvx on first use"
 
     local be
-    if [[ -n "${GEMMA_BACKEND:-}" ]]; then be="$GEMMA_BACKEND (forced via GEMMA_BACKEND)"
+    if [[ -n "${GENIE_BACKEND:-}" ]]; then be="$GENIE_BACKEND (forced via GENIE_BACKEND)"
     elif [[ -s "$BACKEND_CACHE" ]]; then be="$(cat "$BACKEND_CACHE") (auto-detected)"
     else be="not detected yet — run a query once"; fi
     printf '  %-9s %s\n' "[info]" "compute backend: $be"
-    printf '  %-9s %s\n' "[info]" "default model: $(resolve_default_model) (system RAM: $(detect_total_gb)GB; override with --model / GEMMA_MODEL)"
+    printf '  %-9s %s\n' "[info]" "default model: $(resolve_default_model) (system RAM: $(detect_total_gb)GB; override with --model / GENIE_MODEL)"
 
     echo
     if [[ $issues -eq 0 ]]; then
@@ -144,9 +144,9 @@ version_gt() {  # true if $1 is a strictly higher version than $2
 
 # Check the repo for a newer version at most once per 24h; if found, atomically
 # swap in the new files (effective next run). Best-effort, non-blocking, and
-# skipped for git checkouts (don't clobber a dev tree) and when GEMMA_NO_UPDATE=1.
+# skipped for git checkouts (don't clobber a dev tree) and when GENIE_NO_UPDATE=1.
 maybe_self_update() {
-    [[ "${GEMMA_NO_UPDATE:-0}" == "1" ]] && return 0
+    [[ "${GENIE_NO_UPDATE:-0}" == "1" ]] && return 0
     [[ -d "$SCRIPT_DIR/.git" ]] && return 0
     command -v curl >/dev/null 2>&1 || return 0
     if [[ -f "$UPDATE_STAMP" ]]; then
@@ -160,7 +160,7 @@ maybe_self_update() {
     if version_gt "$remote_ver" "$VERSION"; then
         echo "genie: upgrading $VERSION -> $remote_ver..." >&2
         local f ok=1
-        for f in genie gemma_rag.py gemma_graph.py install.sh; do
+        for f in genie genie_rag.py genie_graph.py install.sh; do
             curl -fsSL "$RAW_BASE/$f" -o "$SCRIPT_DIR/.$f.new" 2>/dev/null \
                 && mv "$SCRIPT_DIR/.$f.new" "$SCRIPT_DIR/$f" || { ok=0; rm -f "$SCRIPT_DIR/.$f.new"; }
         done
@@ -183,7 +183,7 @@ cmd_uninstall() {
     local yes=0
     [[ "${1:-}" == "-y" || "${1:-}" == "--yes" ]] && yes=1
     echo "Gemma Genie uninstall will remove:"
-    echo "  - data & settings:   $HOME/.gemma"
+    echo "  - data & settings:   $HOME/.genie"
     echo "  - model weights:     $HF_HOME/hub (Gemma + embedder)"
     echo "  - command symlinks:  /usr/local/bin/genie, $HOME/.local/bin/genie"
     echo "  - installed scripts: $SCRIPT_DIR (skipped if it's a git checkout)"
@@ -193,7 +193,7 @@ cmd_uninstall() {
         read -r ans || ans=""
         [[ "$ans" =~ ^[Yy] ]] || { echo "Aborted."; return 1; }
     fi
-    rm -rf "$HOME/.gemma" && echo "Removed $HOME/.gemma"
+    rm -rf "$HOME/.genie" && echo "Removed $HOME/.genie"
     rm -rf "$HF_HOME"/hub/models--litert-community--gemma-4-* 2>/dev/null && echo "Removed Gemma model weights"
     rm -rf "$HF_HOME"/hub/models--minishlab--potion-base-8M 2>/dev/null && echo "Removed embedder weights"
     local b
@@ -206,7 +206,7 @@ cmd_uninstall() {
     if [[ -d "$SCRIPT_DIR/.git" ]]; then
         echo "Note: $SCRIPT_DIR is a git checkout — left intact (remove manually if desired)."
     else
-        rm -f "$SCRIPT_DIR"/genie "$SCRIPT_DIR"/gemma_rag.py "$SCRIPT_DIR"/gemma_graph.py \
+        rm -f "$SCRIPT_DIR"/genie "$SCRIPT_DIR"/genie_rag.py "$SCRIPT_DIR"/genie_graph.py \
               "$SCRIPT_DIR"/install.sh "$SCRIPT_DIR"/genie.png 2>/dev/null
         rmdir "$SCRIPT_DIR" 2>/dev/null
         echo "Removed installed scripts in $SCRIPT_DIR"
@@ -214,10 +214,10 @@ cmd_uninstall() {
     echo "Gemma Genie uninstalled."
 }
 
-# Default model: GEMMA_MODEL env > cached choice (set at install from RAM) >
+# Default model: GENIE_MODEL env > cached choice (set at install from RAM) >
 # runtime RAM check (>=6GB -> e4b, else e2b).
 resolve_default_model() {
-    if [[ -n "${GEMMA_MODEL:-}" ]]; then printf '%s' "$GEMMA_MODEL"; return; fi
+    if [[ -n "${GENIE_MODEL:-}" ]]; then printf '%s' "$GENIE_MODEL"; return; fi
     if [[ -s "$MODEL_DEFAULT_FILE" ]]; then cat "$MODEL_DEFAULT_FILE"; return; fi
     [[ "$(detect_total_gb)" -ge 6 ]] && printf 'e4b' || printf 'e2b'
 }
@@ -301,10 +301,10 @@ print_sources() {
     fi
 }
 
-# Pick the compute backend: honor GEMMA_BACKEND, else use the cached choice,
+# Pick the compute backend: honor GENIE_BACKEND, else use the cached choice,
 # else probe the GPU once (fall back to CPU if it fails) and cache the result.
 resolve_backend() {
-    if [[ -n "${GEMMA_BACKEND:-}" ]]; then printf '%s' "$GEMMA_BACKEND"; return; fi
+    if [[ -n "${GENIE_BACKEND:-}" ]]; then printf '%s' "$GENIE_BACKEND"; return; fi
     if [[ -s "$BACKEND_CACHE" ]]; then cat "$BACKEND_CACHE"; return; fi
     local b="cpu"
     echo "Detecting compute backend (one-time)..." >&2

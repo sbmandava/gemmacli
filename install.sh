@@ -4,23 +4,23 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash
 #
-# Idempotent: safe to re-run. If you delete ~/.gemma (the vector cache) or are on
+# Idempotent: safe to re-run. If you delete ~/.genie (the vector cache) or are on
 # a brand-new laptop, re-running this brings everything back, including the
 # Gemma model weights.
 #
 # Environment overrides:
-#   GEMMA_INSTALL_DIR   where the scripts live   (default: /opt/projects/unovie/gemmacli)
-#   GEMMA_BIN_DIR       where the `gemma` link goes (default: /usr/local/bin, falls back to ~/.local/bin)
-#   GEMMA_RAW_BASE      raw URL to fetch files from when piped via curl
+#   GENIE_INSTALL_DIR   where the scripts live   (default: /opt/projects/unovie/gemmacli)
+#   GENIE_BIN_DIR       where the `gemma` link goes (default: /usr/local/bin, falls back to ~/.local/bin)
+#   GENIE_RAW_BASE      raw URL to fetch files from when piped via curl
 #   HF_HOME             HuggingFace cache root (default: ~/.cache/huggingface) — all models go here
-#   GEMMA_SKIP_MODELS=1 skip downloading the (large) Gemma weights
-#   GEMMA_SKIP_PREWARM=1 skip all pre-downloads (deps still install)
+#   GENIE_SKIP_MODELS=1 skip downloading the (large) Gemma weights
+#   GENIE_SKIP_PREWARM=1 skip all pre-downloads (deps still install)
 #
 set -euo pipefail
 
-INSTALL_DIR="${GEMMA_INSTALL_DIR:-/opt/projects/unovie/gemmacli}"
-RAW_BASE="${GEMMA_RAW_BASE:-https://raw.githubusercontent.com/sbmandava/gemma-genie/main}"
-CACHE_DIR="$HOME/.gemma"
+INSTALL_DIR="${GENIE_INSTALL_DIR:-/opt/projects/unovie/gemmacli}"
+RAW_BASE="${GENIE_RAW_BASE:-https://raw.githubusercontent.com/sbmandava/gemma-genie/main}"
+CACHE_DIR="$HOME/.genie"
 
 # All models live in the HuggingFace hub cache.
 export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
@@ -88,8 +88,8 @@ fetch() {  # fetch <filename>
     fi
 }
 fetch genie
-fetch gemma_rag.py
-fetch gemma_graph.py
+fetch genie_rag.py
+fetch genie_graph.py
 chmod +x "$INSTALL_DIR/genie"
 
 mkdir -p "$CACHE_DIR"   # vector cache lives here (recreated if deleted)
@@ -109,7 +109,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Symlink `gemma` onto the PATH
 # ---------------------------------------------------------------------------
-BIN_DIR="${GEMMA_BIN_DIR:-/usr/local/bin}"
+BIN_DIR="${GENIE_BIN_DIR:-/usr/local/bin}"
 if { mkdir -p "$BIN_DIR" 2>/dev/null || [ -d "$BIN_DIR" ]; } && \
    ln -sf "$INSTALL_DIR/genie" "$BIN_DIR/genie" 2>/dev/null; then
     say "Linked $BIN_DIR/genie"
@@ -142,7 +142,7 @@ hf_cached() {  # repo [file]
     fi
 }
 
-if [ "${GEMMA_SKIP_PREWARM:-0}" != "1" ]; then
+if [ "${GENIE_SKIP_PREWARM:-0}" != "1" ]; then
     say "Pre-fetching liteparse..."
     uvx --from liteparse lit --help >/dev/null 2>&1 || warn "liteparse prefetch failed"
 
@@ -161,7 +161,7 @@ PY
     uvx --python 3.12 --with ladybug python -c "import ladybug" >/dev/null 2>&1 \
         || warn "ladybug prefetch failed"
 
-    if [ "${GEMMA_SKIP_MODELS:-0}" != "1" ]; then
+    if [ "${GENIE_SKIP_MODELS:-0}" != "1" ]; then
         for spec in "${MODEL_SPECS[@]}"; do
             repo="${spec%%|*}"; file="${spec##*|}"
             if hf_cached "$repo" "$file"; then

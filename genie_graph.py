@@ -30,7 +30,7 @@ import time
 
 # Reuse the file walker / extractor from the RAG helper (same directory).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gemma_rag import extract_file, file_sig, walk_files, TEXT_EXTS, DOC_EXTS  # noqa: E402
+from genie_rag import extract_file, file_sig, walk_files, TEXT_EXTS, DOC_EXTS  # noqa: E402
 
 STOPWORDS = {
     "The", "This", "That", "These", "Those", "There", "Here", "And", "But",

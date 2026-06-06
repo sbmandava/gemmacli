@@ -143,14 +143,14 @@ indexed in the last 24h. Everything runs locally.
 **No.** Your documents, questions, embeddings, and the graph never leave the
 machine. There is no cloud API, no account, and no telemetry. All processing
 (extraction, embedding, retrieval, and the model itself) happens on-device, and
-all data stays under `~/.gemma/` and the local HuggingFace cache.
+all data stays under `~/.genie/` and the local HuggingFace cache.
 
 The **only** network usage is:
 - the **one-time install** (downloading `uv`, Python packages, and the Gemma
   model weights), and
 - a **once-per-24h version check** against the public GitHub repo (just to
   auto-upgrade the scripts — your data is never sent). Disable it with
-  `GEMMA_NO_UPDATE=1`.
+  `GENIE_NO_UPDATE=1`.
 
 ---
 
@@ -160,7 +160,7 @@ The **only** network usage is:
 `genie` works fully offline — no Wi-Fi required. The 24h update check simply
 fails silently when there's no connection and doesn't affect answering.
 
-If you want zero network attempts at all, set `GEMMA_NO_UPDATE=1`.
+If you want zero network attempts at all, set `GENIE_NO_UPDATE=1`.
 
 ---
 
@@ -215,7 +215,7 @@ graph, but that finishes and exits on its own — nothing stays resident.)
 | GPU | none (CPU works) | Apple M-series / supported GPU |
 
 - The default model is chosen automatically from RAM: **< 6 GB → e2b**,
-  **≥ 6 GB → e4b**. Override anytime with `--model e2b|e4b` or `GEMMA_MODEL`.
+  **≥ 6 GB → e4b**. Override anytime with `--model e2b|e4b` or `GENIE_MODEL`.
 - GPU is auto-detected with automatic CPU fallback. Check what you're on with
   `genie doctor`.
 
@@ -258,8 +258,24 @@ the baggage of stale, old information**:
   data, not artifacts from last week's documents.
 
 Nothing is lost: your **original files are untouched**, and re-asking simply
-re-indexes them. You can tune or disable expiry with `GEMMA_CACHE_TTL` (seconds),
-e.g. `GEMMA_CACHE_TTL=604800` for 7 days, or clear it yourself anytime (below).
+re-indexes them. You can tune or disable expiry with `GENIE_CACHE_TTL` (seconds),
+e.g. `GENIE_CACHE_TTL=604800` for 7 days, or clear it yourself anytime (below).
+
+---
+
+### How big are the indexes / knowledge graph?
+
+**Tiny.** Both the LanceDB vector index and the LadybugDB knowledge graph are
+**highly compressed, columnar indexes** — they store compact embeddings and
+entity relationships, not copies of your files. For a typical few-document
+corpus the whole footprint is **well under a megabyte** (e.g. a 4-document set
+here uses ~220 KB for the vector index and ~590 KB for the graph).
+
+So it **barely consumes anything day to day**, and because everything
+**auto-cleans after 24h of being idle** (see above), it never grows unbounded —
+it stays small and fresh on its own. The only sizeable storage is the one-time
+Gemma model download in the HuggingFace cache (a few GB), which is shared and
+not part of the per-use index.
 
 ---
 
@@ -273,7 +289,7 @@ genie cache clear
 
 # Or wipe everything genie stores (vector cache, graph, backend/model choice,
 # update timestamp) and start completely fresh:
-rm -rf ~/.gemma
+rm -rf ~/.genie
 
 # Re-running any command (or the installer) recreates what's needed.
 ```
@@ -294,9 +310,9 @@ stale data clears itself over time.
 
 | Path | What |
 |------|------|
-| `~/.gemma/gemma-cache.db/` | LanceDB vector cache |
-| `~/.gemma/gemma-graph.lbug` | LadybugDB correlation graph |
-| `~/.gemma/backend`, `~/.gemma/model_default` | detected GPU/CPU + default model |
+| `~/.genie/genie-cache.db/` | LanceDB vector cache |
+| `~/.genie/genie-graph.lbug` | LadybugDB correlation graph |
+| `~/.genie/backend`, `~/.genie/model_default` | detected GPU/CPU + default model |
 | `~/.cache/huggingface/hub/` | model weights (Gemma + embedder) |
 | `/opt/projects/unovie/gemmacli/` (or your install dir) | the scripts |
 
@@ -306,8 +322,8 @@ stale data clears itself over time.
 
 ```bash
 genie --model e2b --ask "..."     # force the small, fast model
-GEMMA_MODEL=e4b genie --ask "..." # force the stronger model
-GEMMA_BACKEND=cpu genie --ask ... # force CPU
+GENIE_MODEL=e4b genie --ask "..." # force the stronger model
+GENIE_BACKEND=cpu genie --ask ... # force CPU
 genie doctor                      # show detected backend + default model + RAM
 ```
 

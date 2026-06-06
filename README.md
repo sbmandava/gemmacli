@@ -34,7 +34,7 @@ The installer is idempotent and bootstraps **everything** on a fresh machine:
 - the Gemma model weights (downloaded into the HuggingFace hub cache)
 - a `genie` symlink on your `PATH`
 
-Re-run it any time to repair an install or after deleting `~/.gemma`.
+Re-run it any time to repair an install or after deleting `~/.genie`.
 
 > **Runs offline.** Network is only needed for the one-time install (downloading
 > `uv`, the Python deps, and the Gemma model weights). Once those are cached,
@@ -109,7 +109,7 @@ genie --graph-query "MATCH (f:File)-[:Mentions]->(e:Entity) RETURN f.name,e.name
   and the graph automatically.
 - **Graph correlation (LadybugDB)**: the graph is updated automatically by the
   steps above (no separate build command) and stored as a local `.lbug` file at
-  `~/.gemma/gemma-graph.lbug`, auto-cleared after 24h idle. Inspect it with
+  `~/.genie/genie-graph.lbug`, auto-cleared after 24h idle. Inspect it with
   `genie --graph-stats` (counts + top hubs) or `genie --graph-query "<cypher>"`.
 - **Auto-consult**: a bare `genie --ask` (no file given) automatically answers
   from whatever you indexed in the last 24h — relevant LanceDB chunks plus
@@ -119,26 +119,26 @@ genie --graph-query "MATCH (f:File)-[:Mentions]->(e:Entity) RETURN f.name,e.name
 
 | Path | What |
 |------|------|
-| `/opt/projects/unovie/gemmacli/` | the scripts (`genie`, `gemma_rag.py`, `install.sh`) |
-| `~/.gemma/gemma-cache.db/` | LanceDB vector cache (safe to delete; rebuilds on demand) |
+| `/opt/projects/unovie/gemmacli/` | the scripts (`genie`, `genie_rag.py`, `install.sh`) |
+| `~/.genie/genie-cache.db/` | LanceDB vector cache (safe to delete; rebuilds on demand) |
 | `~/.cache/huggingface/hub/` | all model weights (Gemma + embedder) |
 
 ## Environment overrides
 
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `GEMMA_CACHE_DB` | `~/.gemma/gemma-cache.db` | vector cache location |
-| `GEMMA_RAG_THRESHOLD` | `14000` | char threshold before RAG kicks in |
-| `GEMMA_RAG_TOPK` | `6` | chunks retrieved per query (`--top-k`) |
-| `GEMMA_CHUNK_SIZE` | `1000` | characters per chunk (`--chunk-size`) |
-| `GEMMA_CACHE_TTL` | `86400` | evict cached tables/graph idle longer than this (seconds) |
-| `GEMMA_GRAPH_DB` | `~/.gemma/gemma-graph.lbug` | LadybugDB correlation-graph file |
-| `GEMMA_BACKEND` | auto | force `gpu` or `cpu` (otherwise auto-detected and cached) |
-| `GEMMA_MODEL` | auto | force `e2b`/`e4b` (default set at install from RAM: <6GB→e2b, ≥6GB→e4b) |
+| `GENIE_CACHE_DB` | `~/.genie/genie-cache.db` | vector cache location |
+| `GENIE_RAG_THRESHOLD` | `14000` | char threshold before RAG kicks in |
+| `GENIE_RAG_TOPK` | `15` | chunks retrieved per query (`--top-k`) |
+| `GENIE_CHUNK_SIZE` | `1000` | characters per chunk (`--chunk-size`) |
+| `GENIE_CACHE_TTL` | `86400` | evict cached tables/graph idle longer than this (seconds) |
+| `GENIE_GRAPH_DB` | `~/.genie/genie-graph.lbug` | LadybugDB correlation-graph file |
+| `GENIE_BACKEND` | auto | force `gpu` or `cpu` (otherwise auto-detected and cached) |
+| `GENIE_MODEL` | auto | force `e2b`/`e4b` (default set at install from RAM: <6GB→e2b, ≥6GB→e4b) |
 | `HF_HOME` | `~/.cache/huggingface` | model cache root |
 
-Installer-only: `GEMMA_INSTALL_DIR`, `GEMMA_BIN_DIR`, `GEMMA_RAW_BASE`,
-`GEMMA_SKIP_MODELS=1`, `GEMMA_SKIP_PREWARM=1`.
+Installer-only: `GENIE_INSTALL_DIR`, `GENIE_BIN_DIR`, `GENIE_RAW_BASE`,
+`GENIE_SKIP_MODELS=1`, `GENIE_SKIP_PREWARM=1`.
 
 ## References
 
