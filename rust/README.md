@@ -26,7 +26,8 @@ C API.
 
 Prereqs: `protoc`, **GCC ≥ 13** on Linux (lbug needs C++20 `<format>`), CMake, a
 C++ toolchain. Linux builds use `CC=gcc-13 CXX=g++-13` (set in `.cargo/config.toml`).
-See [`../CLAUDE.md`](../CLAUDE.md) for the full list and the **macOS build host**.
+**Full step-by-step setup (install Rust + native prereqs + upstream source deps,
+Linux & macOS): [`../docs/DEVELOPER.md`](../docs/DEVELOPER.md).**
 
 ```sh
 cd rust
@@ -49,6 +50,17 @@ the integration tests is `/opt/projects/unovie/dataingest/sample`.
 [`crates/genie-bootstrap`](crates/genie-bootstrap) — it probes the environment
 and fetches only the components a target needs. See
 [`../specs/rust-installer.md`](../specs/rust-installer.md) (local).
+
+The bootstrapper is published on crates.io, so with a Rust toolchain you can:
+
+```bash
+cargo install genie-bootstrap     # https://crates.io/crates/genie-bootstrap
+genie-bootstrap --install
+```
+
+(Only `genie-bootstrap` is on crates.io — it has no native/path deps. The `genie`
+CLI is built from this workspace as above; its local/path deps can't be published
+to crates.io.)
 
 ## Layout
 

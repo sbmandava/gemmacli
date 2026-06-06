@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OS-agnostic modular installer** (`rust/installer/` + the `genie-bootstrap`
   crate): a tiny bootstrapper probes the environment (OS/arch/GPU/RAM) and fetches
   only the components a target needs.
+- **`genie-bootstrap` published to [crates.io](https://crates.io/crates/genie-bootstrap)**
+  (v0.2.4): `cargo install genie-bootstrap && genie-bootstrap --install` fetches the
+  matching prebuilt `genie`. (The `genie` CLI stays off crates.io — its local/path
+  deps aren't publishable; end users get the prebuilt binary, developers build from
+  `rust/`.)
 
 ### Changed
 - **Repository restructure**: the shipping bash + Python implementation moved to

@@ -1,9 +1,13 @@
 [package]
 name = "genie-bootstrap"
-version = "0.1.0"
+version = "0.2.4"
 edition = "2021"
 description = "OS-agnostic modular installer for Gemma Genie — probes the environment and fetches only the components it needs"
 license = "Apache-2.0"
+repository = "https://github.com/sbmandava/gemma-genie"
+homepage = "https://github.com/sbmandava/gemma-genie"
+keywords = ["installer", "bootstrap", "offline", "llm", "cli"]
+categories = ["command-line-utilities"]
 
 [[bin]]
 name = "genie-bootstrap"

@@ -325,6 +325,31 @@ so nothing breaks while we level up the foundation.
 
 ---
 
+### Can I install Genie with Cargo?
+
+Yes. The Rust **installer** is published on
+[crates.io](https://crates.io/crates/genie-bootstrap) as `genie-bootstrap`. If
+you have a Rust toolchain:
+
+```bash
+cargo install genie-bootstrap
+genie-bootstrap --install
+```
+
+`genie-bootstrap` is a tiny, dependency-light binary that probes your
+environment (OS, arch, GPU, RAM) and fetches **only** the components your
+machine needs — the matching prebuilt `genie` CLI, one model variant by RAM, and
+the embedder — then places `genie` on your `PATH`. It's the same prebuilt binary
+the `curl | bash` installer uses, just delivered through Cargo.
+
+Note: the `genie` CLI itself is **not** on crates.io. It depends on local/path
+crates (LanceDB, Lance, model2vec-rs, liteparse, LadybugDB) that crates.io
+doesn't permit in a published crate, so end users get the prebuilt binary (via
+`genie-bootstrap`, the `curl` installer, or GitHub Releases) and developers build
+it from [`rust/`](../rust/).
+
+---
+
 ### Does my data leave my laptop?
 
 **No.** Your documents, questions, embeddings, and the graph never leave the

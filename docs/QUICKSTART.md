@@ -29,6 +29,18 @@ Prebuilt Rust CLIs are published for **x86_64 Linux** and **Apple-Silicon
 macOS**; other targets use `--python` (or build from
 [rust/README.md](../rust/README.md)). Usage below is identical for both builds.
 
+### Have Rust? Install via Cargo
+
+The installer is on [crates.io](https://crates.io/crates/genie-bootstrap). It
+detects your environment and pulls only what it needs:
+
+```bash
+cargo install genie-bootstrap
+genie-bootstrap --install
+```
+
+This places the same prebuilt `genie` on your `PATH` — no full source build.
+
 ## B. Verify the install — `genie doctor`
 
 Confirm all dependencies are present and the runtime is ready:
