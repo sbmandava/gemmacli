@@ -329,9 +329,10 @@ if [[ "$action" == "--ask" && $inputs -eq 0 && ! -t 0 ]]; then
     [[ -n "$STDIN_TEXT" ]] && from_stdin=1
 fi
 
-# File analysis (--txt/--doc/--dir/stdin) is a heavier task; default to the
-# stronger e4b model unless the user explicitly picked one with --model.
-if [[ ( $inputs -eq 1 || $from_stdin -eq 1 ) && "$model_explicit" == false ]]; then
+# Q&A (any --ask) reasons over retrieved context (files, stdin, or the indexed
+# knowledge base), so default to the stronger e4b model unless the user picked
+# one explicitly. --image/--audio keep the default e2b.
+if [[ "$action" == "--ask" && "$model_explicit" == false ]]; then
     model_variant="e4b"
 fi
 
@@ -451,10 +452,15 @@ $extracted"
             if [[ -n "$kb_ctx" || -n "$graph_ctx" ]]; then
                 prompt="$arg
 
-The following may be relevant context from your previously indexed data:
+Answer using the knowledge-graph relationships and document excerpts below
+(retrieved from the user's indexed data). Ground every claim in this evidence,
+pay attention to source file names, and use the graph relationships to
+disambiguate how entities relate (e.g. owner/builder vs. customer/brand).
 ${graph_ctx:+
+Knowledge-graph relationships:
 $graph_ctx}
 ${kb_ctx:+
+Document excerpts:
 $kb_ctx}"
             fi
         fi
