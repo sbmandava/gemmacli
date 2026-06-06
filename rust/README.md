@@ -1,7 +1,7 @@
 # Gemma Genie — Rust rewrite
 
 Single-binary Rust port of the bash + Python implementation in [`../python/`](../python/).
-Design and milestones: [`../RUST_PLAN.md`](../RUST_PLAN.md). Dependency wiring and
+Design and milestones: [`../RUST_PLAN.md`](../docs/RUST_PLAN.md). Dependency wiring and
 build prerequisites: [`../CLAUDE.md`](../CLAUDE.md).
 
 **Status: M0–M6 implemented and tested.** The `genie` binary reaches behaviour

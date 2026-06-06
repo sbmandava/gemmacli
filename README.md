@@ -22,10 +22,10 @@ edge** — see [Sponsor & vision](#sponsor--vision).
 
 **Documentation**
 
-- [QUICKSTART.md](QUICKSTART.md) — install and first queries in five steps
-- [FAQ.md](FAQ.md) — privacy, offline use, file formats, requirements, cache reset
-- [VERSIONS.md](VERSIONS.md) — pinned dependency versions
-- [CHANGELOG.md](CHANGELOG.md) — version history
+- [QUICKSTART.md](docs/QUICKSTART.md) — install and first queries in five steps
+- [FAQ.md](docs/FAQ.md) — privacy, offline use, file formats, requirements, cache reset
+- [VERSIONS.md](docs/VERSIONS.md) — pinned dependency versions
+- [CHANGELOG.md](docs/CHANGELOG.md) — version history
 - [rust/README.md](rust/README.md) — the single-binary **Rust rewrite** (in progress)
 
 ## Repository layout

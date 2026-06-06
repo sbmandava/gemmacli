@@ -27,7 +27,7 @@ curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.
 
 Prebuilt Rust CLIs are published for **x86_64 Linux** and **Apple-Silicon
 macOS**; other targets use `--python` (or build from
-[rust/README.md](rust/README.md)). Usage below is identical for both builds.
+[rust/README.md](../rust/README.md)). Usage below is identical for both builds.
 
 ## B. Verify the install — `genie doctor`
 
@@ -88,5 +88,5 @@ genie --doc report.pdf --ask "what are the conclusions?"   # one-off document
 cat notes.txt | genie --ask "summarize this"               # piped input
 ```
 
-See [README.md](README.md) for the full reference and
+See [README.md](../README.md) for the full reference and
 [VERSIONS.md](VERSIONS.md) for pinned dependency versions.

@@ -1,10 +1,10 @@
 # Pinned Versions
 
-The shipping **Python implementation** (in [`python/`](python/)) resolves its
+The shipping **Python implementation** (in [`python/`](../python/)) resolves its
 runtime dependencies on demand via `uvx`. To keep resolution reproducible — so a
 cache miss can't silently pull a newer, possibly breaking release — every
 dependency is pinned to a known-good version. (The **Rust rewrite** in
-[`rust/`](rust/) pins its equivalents in Cargo from local source — see the
+[`rust/`](../rust/) pins its equivalents in Cargo from local source — see the
 "Rust rewrite" section below.)
 
 This file is the single source of truth. When bumping a version, update the

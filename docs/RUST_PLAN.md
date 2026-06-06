@@ -1,7 +1,7 @@
 # Gemma Genie — Rust rewrite plan
 
 Status: **implemented** — milestones M0–M6 are built and tested on the `rust`
-branch (see [rust/README.md](rust/README.md)). This document is the original
+branch (see [rust/README.md](../rust/README.md)). This document is the original
 plan, kept for reference. Target branch: `rust`.
 
 Goal: replace the bash `genie` orchestrator and the two Python helpers
