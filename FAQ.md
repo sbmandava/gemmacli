@@ -67,9 +67,10 @@ by combining **two complementary memories**, both running locally:
   passages — even across hundreds of pages and many files — and shows only those
   to the model. This keeps answers grounded in your actual text and within the
   model's context window. Huge thanks to the **[LanceDB](https://lancedb.github.io/lancedb/)**
-  team — especially **Prashant Rao**, a truly innovative leader from Toronto who
-  teaches the world through his blog [The Data Quarry](https://thedataquarry.com/)
-  — for a fast, embeddable vector database.
+  team — especially **[Prashant Rao](https://ca.linkedin.com/in/prrao87)**, a
+  truly innovative leader from Toronto who teaches the world through his blog
+  [The Data Quarry](https://thedataquarry.com/) — for a fast, embeddable vector
+  database.
 
 - **Knowledge graph (LadybugDB).** As files are indexed, `genie` also extracts
   the people, projects, organizations, and products and stores how they relate
