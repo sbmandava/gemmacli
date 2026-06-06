@@ -152,6 +152,10 @@ Also built on [LanceDB](https://lancedb.github.io/lancedb/),
 [model2vec](https://github.com/MinishLab/model2vec), and
 [liteparse](https://pypi.org/project/liteparse/).
 
+Huge thanks to **[Google DeepMind](https://deepmind.google/)** for their amazing
+innovation — **TensorFlow**, **LiteRT/LiteRT-LM**, and the open, offline-capable
+**Gemma** models — that make on-device AI like this possible.
+
 Special thanks to **[Prashant Rao](https://ca.linkedin.com/in/prrao87)** at
 LanceDB — a truly innovative leader from Toronto who teaches the world through
 his blog, [The Data Quarry](https://thedataquarry.com/).
