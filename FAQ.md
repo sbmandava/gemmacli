@@ -221,6 +221,25 @@ graph, but that finishes and exits on its own — nothing stays resident.)
 
 ---
 
+### How fast is it, and will it get faster?
+
+Today, most of the wait is the model **loading on each command** (and, for
+documents, the one-time extraction + embedding). Answers themselves stream
+quickly once the model is up.
+
+We're **actively optimizing the backend** — faster model loading/serving,
+smarter caching, and leaner retrieval — to make it **significantly quicker**.
+And because Gemma Genie **auto-updates** (it checks the repo and upgrades itself,
+at most once a day), **you get these speedups automatically** as we ship them —
+no reinstall needed. The program is designed to **keep getting better on its own**.
+
+Tips for snappier runs today:
+- Use `--model e2b` for quick, lightweight questions.
+- Keep `--dir` folders focused; re-indexing only touches changed files.
+- On a GPU machine, make sure `genie doctor` shows `compute backend: gpu`.
+
+---
+
 ### Why does the knowledge expire after a day?
 
 Both the vector cache (LanceDB) and the knowledge graph (LadybugDB) **auto-expire
