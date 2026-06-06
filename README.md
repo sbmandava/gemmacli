@@ -34,9 +34,9 @@ The shipping implementation and a from-scratch rewrite live side by side:
 
 | Path | What |
 |------|------|
-| [`install.sh`](install.sh) | the installer (repo root). Default installs the Python implementation; `--rust` installs the prebuilt Rust binary. |
-| [`python/`](python/) | the **shipping** implementation — bash `genie` + Python helpers (`genie_rag.py`, `genie_graph.py`) run via `uvx`. This is what the installer sets up by default. |
-| [`rust/`](rust/) | the **single-binary Rust rewrite** — same CLI/behaviour, no Python/`uvx` at runtime (`lancedb` + `model2vec-rs` + `liteparse` + `lbug`, with litert-lm subprocessed). Builds for Linux/macOS today; see [rust/README.md](rust/README.md). Install with `install.sh --rust`. |
+| [`install.sh`](install.sh) | the installer (repo root). **Default installs the Rust binary**; `--python` installs the bash + Python implementation. |
+| [`rust/`](rust/) | the **single-binary Rust build** (the default) — same CLI/behaviour, no Python/`uvx` at runtime (`lancedb` + `model2vec-rs` + `liteparse` + `lbug`, with litert-lm subprocessed). Prebuilt for Linux/macOS; see [rust/README.md](rust/README.md). |
+| [`python/`](python/) | the **bash + Python** implementation — `genie` + helpers (`genie_rag.py`, `genie_graph.py`) run via `uvx`. Installed with `install.sh --python`. |
 
 ## Supported platforms
 
@@ -50,19 +50,31 @@ GPU acceleration is used when available, with automatic fallback to CPU.
 
 ## Install
 
+By default this installs the **Rust single-binary** build (no Python at runtime):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash
 ```
 
+Prefer the **bash + Python** implementation? Add `--python`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash -s -- --python
+```
+
 The installer is idempotent and bootstraps **everything** on a fresh machine:
 
-- `uv` / `uvx` (auto-installed if missing)
-- LibreOffice (macOS, for DOCX/XLSX/PPTX parsing)
-- `liteparse`, `lancedb`, `model2vec`, `ladybug` (fetched via `uvx`, pinned)
+- the prebuilt Rust `genie` for your OS/arch (default), or the bash + Python
+  scripts with `--python`
+- `uv` / `uvx` (auto-installed; runs the litert-lm runtime, and the Python deps
+  in `--python` mode)
+- LibreOffice (for DOCX/XLSX/PPTX parsing)
 - the Gemma model weights (downloaded into the HuggingFace hub cache)
 - a `genie` symlink on your `PATH`
 
-Re-run it any time to repair an install or after deleting `~/.genie`.
+Prebuilt Rust CLIs are published for **x86_64 Linux** and **Apple-Silicon
+macOS**; other targets fall back to `--python` (or build from
+[`rust/`](rust/)). Re-run any time to repair an install or after deleting `~/.genie`.
 
 > **Runs offline.** Network is only needed for the one-time install (downloading
 > `uv`, the Python deps, and the Gemma model weights). Once those are cached,

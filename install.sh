@@ -2,19 +2,20 @@
 #
 # Gemma Genie installer — bootstraps everything on a fresh machine.
 #
-#   # Python implementation (bash + Python helpers, the default):
+#   # Default: the Rust single-binary build (downloads the prebuilt genie):
 #   curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash
 #
-#   # Rust single-binary build (downloads the prebuilt genie for your OS/arch):
-#   curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash -s -- --rust
+#   # Python implementation instead (bash + Python helpers via uvx):
+#   curl -fsSL https://raw.githubusercontent.com/sbmandava/gemma-genie/main/install.sh | bash -s -- --python
 #
 # Idempotent: safe to re-run. If you delete ~/.genie (the vector cache) or are on
 # a brand-new laptop, re-running this brings everything back, including the
 # Gemma model weights.
 #
 # Flags:
-#   --rust              install the prebuilt Rust `genie` binary instead of the
-#                       bash + Python scripts (same runtime: litert-lm + models)
+#   (default)           install the prebuilt Rust `genie` binary for your OS/arch
+#   --python            install the bash + Python scripts instead
+#   --rust              explicit Rust (the default; accepted for clarity)
 #
 # Environment overrides:
 #   GENIE_INSTALL_DIR   where the scripts live   (default: ~/.local/share/genie)
@@ -66,17 +67,19 @@ if [ -n "$SELF" ] && [ -f "$SELF" ]; then
     fi
 fi
 
-# Flags.
-RUST_MODE=0
+# Flags. Default is the Rust single-binary build; --python installs the bash +
+# Python implementation instead. (--rust is accepted as an explicit no-op.)
+RUST_MODE=1
 for arg in "$@"; do
     case "$arg" in
+        --python) RUST_MODE=0 ;;
         --rust) RUST_MODE=1 ;;
-        -h|--help) sed -n '2,30p' "$0" 2>/dev/null | sed 's/^#//'; exit 0 ;;
+        -h|--help) sed -n '2,32p' "$0" 2>/dev/null | sed 's/^#//'; exit 0 ;;
         *) warn "ignoring unknown flag: $arg" ;;
     esac
 done
 
-# Rust prebuilt download settings (used only with --rust).
+# Rust prebuilt download settings (used unless --python).
 RUST_RELEASE="${GENIE_RUST_RELEASE:-rust-prebuilt-0.2.4}"
 RUST_BASE="${GENIE_RUST_BASE:-https://github.com/sbmandava/gemma-genie/releases/download/$RUST_RELEASE}"
 
@@ -172,12 +175,13 @@ if [ "$RUST_MODE" = 1 ]; then
     asset="$(rust_cli_asset)"
     if [ -z "$asset" ]; then
         warn "No prebuilt Rust 'genie' for $(uname)/$(uname -m)."
-        warn "Prebuilt CLIs exist only for x86_64-linux and aarch64-macOS;"
-        warn "build from source in rust/ for other targets. Falling back to the bash version is also an option (re-run without --rust)."
+        warn "Prebuilt CLIs exist only for x86_64-linux and aarch64-macOS."
+        warn "For other targets, install the Python version instead: re-run with --python"
+        warn "(or build the Rust binary from source in rust/)."
         exit 1
     fi
     say "Installing the Rust genie binary ($asset) from release $RUST_RELEASE..."
-    curl -fSL "$RUST_BASE/$asset" -o "$INSTALL_DIR/genie" \
+    curl -fsSL "$RUST_BASE/$asset" -o "$INSTALL_DIR/genie" \
         || { warn "Failed to download $RUST_BASE/$asset"; exit 1; }
 else
     fetch genie
