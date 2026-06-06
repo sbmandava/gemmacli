@@ -1,8 +1,9 @@
 # gemma CLI
 
-A small local-LLM CLI built on Google's **Gemma** models via
+A small local-LLM CLI built on Google's **Gemma 4** models — **E2B** (fast) and
+**E4B** (stronger) — run on-device via
 [`litert-lm`](https://github.com/google-ai-edge/litert-lm). Ask questions,
-analyze documents, and query whole directories — all on-device.
+analyze documents, and query whole directories — all locally.
 
 ## Install
 
@@ -44,8 +45,10 @@ Run `gemma --help` for all options plus a live dependency check.
 
 ## How it works
 
-- **Model**: `e2b` (fast) or `e4b` (stronger). File modes (`--txt/--doc/--dir`)
-  default to `e4b`; override with `--model`.
+- **Model**: **Gemma 4 E2B** (`--model e2b`, fast) or **Gemma 4 E4B**
+  (`--model e4b`, stronger). File modes (`--txt/--doc/--dir`) default to **E4B**;
+  override with `--model`. Weights are pulled from the `litert-community`
+  HuggingFace repos (`gemma-4-E2B-it-litert-lm`, `gemma-4-E4B-it-litert-lm`).
 - **Large inputs**: files over ~3,500 tokens are chunked, embedded with
   `model2vec`, and stored in a **LanceDB** vector cache. Only the chunks most
   relevant to your question are sent to the model — keeping answers accurate and
