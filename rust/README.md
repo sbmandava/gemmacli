@@ -26,7 +26,8 @@ C API.
 
 Prereqs: `protoc`, **GCC ≥ 13** on Linux (lbug needs C++20 `<format>`), CMake, a
 C++ toolchain. Linux builds use `CC=gcc-13 CXX=g++-13` (set in `.cargo/config.toml`).
-See [`../CLAUDE.md`](../CLAUDE.md) for the full list and the **macOS build host**.
+**Full step-by-step setup (install Rust + native prereqs + upstream source deps,
+Linux & macOS): [`../docs/DEVELOPER.md`](../docs/DEVELOPER.md).**
 
 ```sh
 cd rust

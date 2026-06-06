@@ -23,6 +23,7 @@ edge** — see [Sponsor & vision](#sponsor--vision).
 **Documentation**
 
 - [QUICKSTART.md](docs/QUICKSTART.md) — install and first queries in five steps
+- [DEVELOPER.md](docs/DEVELOPER.md) — install Rust + build the `genie` CLI from source (Linux/macOS)
 - [FAQ.md](docs/FAQ.md) — privacy, offline use, file formats, requirements, cache reset
 - [VERSIONS.md](docs/VERSIONS.md) — pinned dependency versions
 - [CHANGELOG.md](docs/CHANGELOG.md) — version history
