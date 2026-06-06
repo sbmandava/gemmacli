@@ -74,6 +74,8 @@ gemma doctor               # dependency check
 gemma cache info           # show vector-cache path, size, table count
 gemma cache list           # list indexed tables
 gemma cache clear          # wipe the vector cache
+gemma --graph-stats        # correlation-graph counts + top entity hubs
+gemma --graph-query "MATCH (f:File)-[:Mentions]->(e:Entity) RETURN f.name,e.name LIMIT 10"
 ```
 
 ## How it works
@@ -88,12 +90,18 @@ gemma cache clear          # wipe the vector cache
   within the context window.
 - **`--dir`**: recursively ingests all supported files into one LanceDB table,
   re-embedding only files that changed, and retrieves across all of them
-  (each excerpt is labeled with its source file).
-- **`graph`**: builds a `(:File)-[:Mentions]->(:Entity)` property graph in
-  **LadybugDB** from a folder (entities extracted heuristically, or with
-  `--llm` via Gemma), then answers correlation queries — shared entities,
-  files linked through them, entity hubs, or raw Cypher. The graph is a local
-  `.lbug` file at `~/.gemma/gemma-graph.lbug` and is auto-cleared after 24h idle.
+  (each excerpt is labeled with its source file). It **also** builds a
+  `(:File)-[:Mentions]->(:Entity)` correlation graph in **LadybugDB** in the
+  same step (entities extracted via Gemma for directories, heuristically for
+  single `--txt`/`--doc`) — so analyzing files populates both the vector cache
+  and the graph automatically.
+- **Graph correlation (LadybugDB)**: the graph is updated automatically by the
+  steps above (no separate build command) and stored as a local `.lbug` file at
+  `~/.gemma/gemma-graph.lbug`, auto-cleared after 24h idle. Inspect it with
+  `gemma --graph-stats` (counts + top hubs) or `gemma --graph-query "<cypher>"`.
+- **Auto-consult**: a bare `gemma --ask` (no file given) automatically answers
+  from whatever you indexed in the last 24h — relevant LanceDB chunks plus
+  LadybugDB entity correlations for the entities in your question.
 
 ## Layout
 
