@@ -1,6 +1,6 @@
 # Gemma Genie — FAQ
 
-## Private AI on your own laptop — powered by Google Gemma E4B
+## Private AI on your own laptop — powered by Google Gemma 4 : E4B
 
 `genie` puts a genuinely capable AI assistant **on your machine**, with **no
 cloud, no accounts, and no internet required** once installed. It's built on
