@@ -36,11 +36,12 @@ gemma --ask "Who is blocked?" --txt tasks.csv
 # Query an entire folder (recursive knowledge base)
 gemma --ask "What's our vacation policy and who owns project X?" --dir ~/notes
 
-# Graph correlation across a folder (LadybugDB)
-gemma graph build --dir ~/notes        # extract entities, build a graph
-gemma graph hubs                       # entities spanning the most files
-gemma graph related "DirecTV"          # files/entities correlated with one
-gemma graph related "report.pdf"       # files sharing entities with a file
+# Graph correlation is automatic: analyzing files also builds a LadybugDB
+# entity graph. A bare --ask then answers from everything indexed in the last 24h.
+gemma --ask "summarize the Q2 risks" --doc q2.pdf   # indexes + answers
+gemma --ask "who owns the Apollo project?"          # uses indexed data, no file
+gemma --graph-stats                                 # graph stats + top hubs
+gemma --graph-query "MATCH (f:File)-[:Mentions]->(e:Entity) RETURN f.name,e.name LIMIT 10"
 
 # Vision / audio
 gemma --image photo.jpg
@@ -102,6 +103,7 @@ gemma cache clear          # wipe the vector cache
 | `GEMMA_CHUNK_SIZE` | `1000` | characters per chunk (`--chunk-size`) |
 | `GEMMA_CACHE_TTL` | `86400` | evict cached tables/graph idle longer than this (seconds) |
 | `GEMMA_GRAPH_DB` | `~/.gemma/gemma-graph.lbug` | LadybugDB correlation-graph file |
+| `GEMMA_BACKEND` | auto | force `gpu` or `cpu` (otherwise auto-detected and cached) |
 | `HF_HOME` | `~/.cache/huggingface` | model cache root |
 
 Installer-only: `GEMMA_INSTALL_DIR`, `GEMMA_BIN_DIR`, `GEMMA_RAW_BASE`,

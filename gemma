@@ -27,8 +27,10 @@ for cand in "/opt/projects/unovie/gemmacli/gemma_graph.py" "$HOME/.gemma/gemma_g
     GRAPH_HELPER="$cand"
 done
 GRAPH_DB="${GEMMA_GRAPH_DB:-$HOME/.gemma/gemma-graph.lbug}"
+GRAPH_LOG="${GEMMA_GRAPH_LOG:-$HOME/.gemma/graph-update.log}"
+BACKEND_CACHE="${GEMMA_BACKEND_CACHE:-$HOME/.gemma/backend}"
 RAG_THRESHOLD_CHARS="${GEMMA_RAG_THRESHOLD:-14000}"   # ~3500 tokens
-RAG_TOPK="${GEMMA_RAG_TOPK:-6}"
+RAG_TOPK="${GEMMA_RAG_TOPK:-15}"
 RAG_TTL="${GEMMA_CACHE_TTL:-86400}"   # evict cached tables idle >24h
 CHUNK_SIZE="${GEMMA_CHUNK_SIZE:-}"    # chars per chunk (empty = helper default)
 VERSION="0.2.0"
@@ -52,15 +54,21 @@ Options:
   --pages RANGE      Limit --doc extraction to these pages, e.g. "1-5,10,15-20"
   --image PATH       Describe the given image using vision backend
   --audio PATH       Transcribe the given audio file using audio backend
-  --top-k N          Chunks retrieved per query for large inputs (default: 6)
+  --top-k N          Chunks retrieved per query (default: 15)
   --chunk-size N     Characters per chunk when embedding (default: 1000)
   -h, --help         Show this help and exit
   -V, --version      Print version and exit
 
-Subcommands:
-  doctor             Run the dependency check and exit
+Subcommands / inspection:
+  doctor                    Run the dependency check and exit
   cache [info|list|clear]   Inspect or clear the LanceDB vector cache
-  graph <cmd>        Build/query a LadybugDB correlation graph (see: graph --help)
+  --graph-stats             Show correlation-graph stats + top hubs
+  --graph-query "<cypher>"  Run a raw Cypher query against the graph
+
+Analyzing files with --txt/--doc/--dir also auto-updates a LadybugDB
+correlation graph (entities per file; --dir uses Gemma for extraction). A bare
+--ask automatically consults whatever you've indexed in the last 24h (LanceDB
+chunks + graph correlations). Both caches live under ~/.gemma and expire after 24h.
 
 Piped input: when no --txt/--doc/--dir is given, stdin is read as the document,
   e.g.  cat notes.txt | $(basename "$0") --ask "summarize this"
@@ -109,6 +117,12 @@ check_deps() {
     fi
 
     printf '  %-9s %s\n' "[note]" "liteparse, litert-lm, lancedb, model2vec, ladybug auto-install via uvx on first use"
+
+    local be
+    if [[ -n "${GEMMA_BACKEND:-}" ]]; then be="$GEMMA_BACKEND (forced via GEMMA_BACKEND)"
+    elif [[ -s "$BACKEND_CACHE" ]]; then be="$(cat "$BACKEND_CACHE") (auto-detected)"
+    else be="not detected yet — run a query once"; fi
+    printf '  %-9s %s\n' "[info]" "compute backend: $be"
 
     echo
     if [[ $issues -eq 0 ]]; then
@@ -172,67 +186,27 @@ graph_model_path() {  # echo cached E4B model path (for --llm extraction), if pr
     find "$HF_HOME/hub/models--${repo//\//--}/snapshots" -name "$file" 2>/dev/null | head -1
 }
 
-cmd_graph() {
-    local sub="${1:-}"; [[ $# -gt 0 ]] && shift
-    local call=(uvx --python 3.12 --with ladybug python "$GRAPH_HELPER" --db "$GRAPH_DB" --ttl "$RAG_TTL")
-    case "$sub" in
-        build)
-            local g_dir="" g_llm=0
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --dir) [[ -n "${2:-}" ]] || { echo "Error: --dir requires a value" >&2; return 1; }; g_dir="$2"; shift 2 ;;
-                    --llm) g_llm=1; shift ;;
-                    *) echo "Error: unknown 'graph build' argument: $1" >&2; return 1 ;;
-                esac
-            done
-            [[ -n "$g_dir" ]] || { echo "Usage: $(basename "$0") graph build --dir PATH [--llm]" >&2; return 1; }
-            [[ -d "$g_dir" ]] || { echo "Error: directory not found: $g_dir" >&2; return 1; }
-            ensure_uvx
-            mkdir -p "$(dirname "$GRAPH_DB")"
-            local extra=(--dir "$g_dir" --recursive)
-            if [[ $g_llm -eq 1 ]]; then
-                local mp; mp="$(graph_model_path)"
-                if [[ -n "$mp" ]]; then
-                    extra+=(--llm --model "$mp")
-                else
-                    echo "Note: e4b model not cached yet — using heuristic extraction." >&2
-                fi
-            fi
-            echo "Building correlation graph from \"$g_dir\"..." >&2
-            "${call[@]}" --mode build "${extra[@]}"
-            ;;
-        related)
-            [[ -n "${1:-}" ]] || { echo "Usage: $(basename "$0") graph related \"<file-or-entity>\"" >&2; return 1; }
-            ensure_uvx; "${call[@]}" --mode related --name "$1"
-            ;;
-        hubs)  ensure_uvx; "${call[@]}" --mode hubs ;;
-        stats) ensure_uvx; "${call[@]}" --mode stats ;;
-        query)
-            [[ -n "${1:-}" ]] || { echo "Usage: $(basename "$0") graph query \"<cypher>\"" >&2; return 1; }
-            ensure_uvx; "${call[@]}" --mode query --cypher "$1"
-            ;;
-        ""|-h|--help)
-            cat <<EOF
-Usage: $(basename "$0") graph <command>
+# Invoke the graph helper (update/stats/query). Best-effort for updates.
+run_graph() {
+    ensure_uvx
+    uvx --python 3.12 --with ladybug python "$GRAPH_HELPER" \
+        --db "$GRAPH_DB" --ttl "$RAG_TTL" "$@"
+}
 
-  build --dir PATH [--llm]   Build a File→Entity correlation graph from a folder
-                             (--llm refines entities with Gemma; slower)
-  related "<file|entity>"    Files/entities correlated with the given one
-  hubs                       Entities spanning the most files
-  stats                      Node/edge counts
-  query "<cypher>"           Run a raw Cypher query
-
-Graph stored at: $GRAPH_DB  (override with GEMMA_GRAPH_DB)
-EOF
-            [[ "$sub" == "-h" || "$sub" == "--help" ]] && return 0
-            [[ -z "$sub" ]] && return 0
-            return 1
-            ;;
-        *)
-            echo "Error: unknown graph command: $sub (try 'graph --help')" >&2
-            return 1
-            ;;
-    esac
+# Pick the compute backend: honor GEMMA_BACKEND, else use the cached choice,
+# else probe the GPU once (fall back to CPU if it fails) and cache the result.
+resolve_backend() {
+    if [[ -n "${GEMMA_BACKEND:-}" ]]; then printf '%s' "$GEMMA_BACKEND"; return; fi
+    if [[ -s "$BACKEND_CACHE" ]]; then cat "$BACKEND_CACHE"; return; fi
+    local b="cpu"
+    echo "Detecting compute backend (one-time)…" >&2
+    if "${LITERT_RUN[@]}" --backend=gpu --max-num-tokens 64 --prompt "ok" >/dev/null 2>&1; then
+        b="gpu"
+    fi
+    mkdir -p "$(dirname "$BACKEND_CACHE")"
+    printf '%s' "$b" > "$BACKEND_CACHE"
+    echo "Using $b backend (cached in $BACKEND_CACHE)." >&2
+    printf '%s' "$b"
 }
 
 model_variant="e2b"
@@ -249,7 +223,11 @@ case "${1:-}" in
     -V|--version|version) echo "gemma $VERSION"; exit 0 ;;
     doctor)               echo "gemma $VERSION"; check_deps; exit 0 ;;
     cache)                shift; cmd_cache "$@"; exit $? ;;
-    graph)                shift; cmd_graph "$@"; exit $? ;;
+    --graph-stats)        mkdir -p "$(dirname "$GRAPH_DB")"; run_graph --mode stats; exit $? ;;
+    --graph-query)
+        [[ -n "${2:-}" ]] || { echo "Usage: $(basename "$0") --graph-query \"<cypher>\"" >&2; exit 1; }
+        run_graph --mode query --cypher "$2"; exit $?
+        ;;
 esac
 
 while [[ $# -gt 0 ]]; do
@@ -373,6 +351,7 @@ else
 fi
 
 ensure_uvx  # install uv on demand if it's missing
+BACKEND="$(resolve_backend)"  # gpu, or cpu if the GPU backend isn't available
 
 case "$action" in
     --ask)
@@ -399,7 +378,15 @@ Use the following excerpts from files in \"$dir_path\" to answer
 (each excerpt is labeled with its source file):
 
 $context"
-            "${LITERT_RUN[@]}" --backend=gpu --prompt="$prompt"
+            "${LITERT_RUN[@]}" --backend="$BACKEND" --prompt="$prompt"
+            # Auto-update the correlation graph in the BACKGROUND (LLM extraction
+            # for directories is slow on first build; detach so the answer is
+            # not blocked). Progress is logged to GRAPH_LOG.
+            mkdir -p "$(dirname "$GRAPH_DB")"
+            graph_args=(--mode update --dir "$dir_path" --recursive)
+            mp="$(graph_model_path)"; [[ -n "$mp" ]] && graph_args+=(--llm --model "$mp" --backend "$BACKEND")
+            echo "Updating correlation graph in background (log: $GRAPH_LOG)" >&2
+            ( run_graph "${graph_args[@]}" >>"$GRAPH_LOG" 2>&1 & )
             exit 0
         fi
 
@@ -448,20 +435,51 @@ Analyze the following document (\"$(basename "$src")\"):
 
 $extracted"
             fi
+        elif [[ $inputs -eq 0 && $from_stdin -eq 0 ]]; then
+            # Bare --ask: automatically consult data ingested in the last 24h
+            # (LanceDB chunks + LadybugDB entity correlations).
+            kb_ctx=""
+            if [[ -d "$RAG_DB" ]]; then
+                kb_ctx="$(uvx --python 3.12 --with lancedb --with model2vec \
+                    python "$RAG_HELPER" --db "$RAG_DB" --search-all \
+                    --query "$arg" --top-k "$RAG_TOPK" --ttl "$RAG_TTL" 2>/dev/null || true)"
+            fi
+            graph_ctx=""
+            if [[ -e "$GRAPH_DB" ]]; then
+                graph_ctx="$(run_graph --mode correlate --query "$arg" 2>/dev/null || true)"
+            fi
+            if [[ -n "$kb_ctx" || -n "$graph_ctx" ]]; then
+                prompt="$arg
+
+The following may be relevant context from your previously indexed data:
+${graph_ctx:+
+$graph_ctx}
+${kb_ctx:+
+$kb_ctx}"
+            fi
         fi
 
         "${LITERT_RUN[@]}" \
-            --backend=gpu \
+            --backend="$BACKEND" \
             --prompt="$prompt"
+
+        # Auto-update the correlation graph for single files (heuristic, fast),
+        # in the background so the answer isn't blocked.
+        if [[ -n "$txt_path" || -n "$doc_path" ]]; then
+            mkdir -p "$(dirname "$GRAPH_DB")"
+            g_sig="$(stat -f '%z-%m' "$src" 2>/dev/null || echo 0)"
+            ( printf '%s' "$extracted" | run_graph --mode update \
+                --file-name "$src" --sig "$g_sig" >>"$GRAPH_LOG" 2>&1 & )
+        fi
         ;;
     --image)
         "${LITERT_RUN[@]}" \
-            --backend=gpu --vision-backend gpu \
+            --backend="$BACKEND" --vision-backend "$BACKEND" \
             --attachment "$arg" --prompt describe
         ;;
     --audio)
         "${LITERT_RUN[@]}" \
-            --backend=gpu --audio-backend cpu \
+            --backend="$BACKEND" --audio-backend cpu \
             --attachment "$arg" --prompt transcribe
         ;;
 esac

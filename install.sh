@@ -161,6 +161,18 @@ PY
               || warn "Could not pre-download $repo (it will download on first use)."
         done
     fi
+
+    # Detect & cache the compute backend (GPU if available, else CPU).
+    if [ ! -s "$CACHE_DIR/backend" ]; then
+        mp="$(find "$HF_HOME/hub" -name "gemma-4-E2B-it.litertlm" 2>/dev/null | head -1)"
+        if [ -n "$mp" ]; then
+            if uvx litert-lm run "$mp" --backend=gpu --max-num-tokens 64 --prompt "ok" >/dev/null 2>&1; then
+                echo gpu > "$CACHE_DIR/backend"; say "Compute backend: gpu"
+            else
+                echo cpu > "$CACHE_DIR/backend"; say "Compute backend: cpu"
+            fi
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------

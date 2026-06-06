@@ -232,6 +232,8 @@ def main():
     ap.add_argument("--dir", help="ingest all supported files in this directory")
     ap.add_argument("--recursive", action="store_true",
                     help="with --dir, descend into subdirectories")
+    ap.add_argument("--search-all", action="store_true", dest="search_all",
+                    help="search every cached table (no ingestion) for --query")
     ap.add_argument("--query", required=True)
     ap.add_argument("--top-k", type=int, default=6)
     ap.add_argument("--chunk-size", type=int, default=1000,
@@ -240,15 +242,14 @@ def main():
                     help="evict cached tables idle longer than this many seconds")
     args = ap.parse_args()
 
-    if not args.dir and not args.cache_key:
-        ap.error("either --dir or --cache-key is required")
+    if not args.dir and not args.cache_key and not args.search_all:
+        ap.error("one of --dir, --cache-key or --search-all is required")
 
     import lancedb
     from model2vec import StaticModel
 
     model = StaticModel.from_pretrained(EMBED_MODEL)
     db = lancedb.connect(args.db)
-    name = dir_table_name(args.dir) if args.dir else table_name(args.cache_key)
 
     # table_names() returns a plain list of names and works in both 0.30.x and
     # 0.33.x. (list_tables() in 0.33 returns a paginated object, not a list.)
@@ -259,6 +260,24 @@ def main():
 
     now = time.time()
     usage, existing, usage_path = prune_expired(db, args.db, existing, args.ttl, now)
+
+    if args.search_all:
+        # Search across every (non-expired) cached table; return global top-k.
+        qvec = model.encode([args.query])[0].tolist()
+        hits = []
+        for t in existing:
+            try:
+                tbl = db.open_table(t)
+                for h in tbl.search(qvec).limit(args.top_k).to_list():
+                    hits.append((h.get("_distance", 9e9), h.get("source"), h.get("text", "")))
+            except Exception:
+                continue
+        hits.sort(key=lambda x: x[0])
+        parts = [(f"[source: {s}]\n{t}" if s else t) for _, s, t in hits[:args.top_k]]
+        sys.stdout.write("\n\n---\n\n".join(parts))
+        return
+
+    name = dir_table_name(args.dir) if args.dir else table_name(args.cache_key)
 
     if args.dir:
         table, (total, added, removed) = ingest_dir(
